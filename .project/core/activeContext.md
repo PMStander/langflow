@@ -1,38 +1,43 @@
 # Active Context
 
 ## Current Work Focus
-The current focus is on resolving frontend and backend integration issues in the Langflow application. Specifically, addressing memory constraints during the frontend build process and ensuring proper communication between frontend and backend components.
+The current focus is on developing an AI Flow Builder Assistant feature for Langflow that will help users build flows through natural language instructions. This feature will enable users to describe their desired flow in plain English, and the assistant will automatically construct the appropriate LangChain flow by selecting and connecting the right components.
 
 ## Immediate Goals
-1. Establish a working development environment despite memory limitations
-2. Implement a reliable workaround for the frontend build process
-3. Document the solution for future reference
-4. Investigate long-term solutions for memory optimization
+1. Finalize the implementation plan for the AI Flow Builder Assistant
+2. Begin development of the Component Knowledge Base as the foundation
+3. Design the API structure for the AI Assistant Service
+4. Create a prototype of the frontend AI Assistant Panel
+5. Implement the initial instruction parsing system
 
 ## Recent Decisions
-1. **Separated Frontend and Backend**: Running the frontend and backend as separate services to avoid the memory-intensive build process
-2. **Environment Configuration**: Modified the `.env` file to comment out `LANGFLOW_FRONTEND_PATH` to prevent the backend from looking for non-existent frontend files
-3. **Development Mode**: Using the frontend in development mode (`npm start`) instead of building for production
+1. **AI Assistant Architecture**: Designed a modular architecture with six main components: AI Assistant Panel, AI Assistant Service, Component Knowledge Base, Flow Construction Engine, Clarification Dialogue Manager, and LLM Provider Integration
+2. **Phased Development Approach**: Adopted a four-phase development plan starting with foundation components and gradually adding advanced features
+3. **Component Knowledge Base Priority**: Identified the Component Knowledge Base as the critical foundation for the entire feature
+4. **LLM Provider Flexibility**: Designed for dynamic switching between different LLM backends and models at runtime
 
 ## Current State
-- **Backend**: Running successfully on port 7860
-- **Frontend**: Running in development mode on port 3000
-- **Build Process**: Failing due to memory constraints (3.8GB RAM with 1GB swap)
-- **Error**: `FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory`
-- **Frontend Build Directory**: Incomplete, containing only a favicon.ico file
+- **Implementation Plan**: Completed comprehensive plan for the AI Flow Builder Assistant feature
+- **Component Analysis**: Analyzed the existing component system and registry to understand how components are defined and connected
+- **Flow Structure**: Examined the flow data structure and how flows are created and managed
+- **Frontend-Backend Communication**: Investigated how the frontend communicates with the backend for flow operations
+- **Previous Issue**: Resolved frontend build process issues by running frontend and backend as separate services
 
 ## Next Steps
 1. **Short-term**:
-   - Document the current workaround in project documentation
-   - Create an issue in the repository to track memory-related build failures
-   - Test with increased NODE_OPTIONS memory limit if possible
+   - Begin implementation of the Component Knowledge Base
+   - Design and implement the backend API endpoints for the AI Assistant Service
+   - Create the frontend skeleton for the AI Assistant Panel
+   - Develop the initial LLM provider interface
 
 2. **Medium-term**:
-   - Review and optimize dependencies to reduce memory footprint
-   - Implement a more robust build process that can handle memory constraints
-   - Add build flags for low-memory environments
+   - Implement the instruction parsing system
+   - Develop the flow construction engine
+   - Integrate the frontend and backend components
+   - Add the clarification system for ambiguous instructions
 
 3. **Long-term**:
-   - Consider splitting the frontend into smaller, more manageable packages
-   - Evaluate alternative build tools that are more memory-efficient
-   - Provide options for building in the cloud and downloading artifacts
+   - Implement advanced features like LLM provider flexibility
+   - Enhance the user experience with improved visualization
+   - Conduct comprehensive testing and optimization
+   - Prepare documentation for users and developers
