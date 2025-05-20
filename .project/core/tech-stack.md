@@ -1,0 +1,8 @@
+# Technology Stack
+
+## Frontend
+
+
+
+## Backend
+
