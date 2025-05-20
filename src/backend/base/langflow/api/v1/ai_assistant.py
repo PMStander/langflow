@@ -1,0 +1,321 @@
+"""API endpoints for the AI Assistant Service."""
+
+from typing import Dict, List, Optional, Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.deps import get_settings_service
+from langflow.services.ai_assistant.service import AIAssistantService
+
+router = APIRouter(prefix="/ai-assistant", tags=["AI Assistant"])
+
+
+class ClarificationQuestion(BaseModel):
+    """Model for a clarification question."""
+
+    question_id: str = Field(..., description="A unique identifier for the question")
+    question: str = Field(..., description="The question to ask the user")
+    options: List[str] = Field(default_factory=list, description="Possible options for the answer")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Context information for the question")
+
+
+class ComponentRequirement(BaseModel):
+    """Model for a component requirement."""
+
+    component_type: str = Field(..., description="The type of the component (e.g., 'llms', 'chains')")
+    component_name: str = Field(..., description="The name of the component (e.g., 'openai', 'llm_chain')")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for the component")
+    description: str = Field("", description="A description of what this component does in the flow")
+
+
+class ConnectionRequirement(BaseModel):
+    """Model for a connection requirement."""
+
+    source_component_idx: int = Field(..., description="The index of the source component in the components list")
+    target_component_idx: int = Field(..., description="The index of the target component in the components list")
+    source_field: str = Field("output", description="The output field of the source component")
+    target_field: str = Field(..., description="The input field of the target component")
+    description: str = Field("", description="A description of what this connection represents")
+
+
+class InstructionRequest(BaseModel):
+    """Request model for interpreting an instruction."""
+
+    instruction: str = Field(..., description="The natural language instruction to interpret")
+    llm_provider: Optional[str] = Field(None, description="The LLM provider to use for interpretation")
+    llm_model: Optional[str] = Field(None, description="The LLM model to use for interpretation")
+
+
+class InstructionResponse(BaseModel):
+    """Response model for an interpreted instruction."""
+
+    instruction: str = Field(..., description="The original instruction")
+    components: List[ComponentRequirement] = Field(default_factory=list, description="Required components")
+    connections: List[ConnectionRequirement] = Field(default_factory=list, description="Required connections")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Global parameters")
+    clarification_needed: bool = Field(False, description="Whether clarification is needed")
+    clarification_questions: List[ClarificationQuestion] = Field(default_factory=list, description="Questions to ask")
+    flow_description: str = Field("", description="A description of what the flow does")
+
+
+class FlowRequest(BaseModel):
+    """Request model for building a flow from an instruction."""
+
+    instruction: str = Field(..., description="The natural language instruction to build a flow from")
+    llm_provider: Optional[str] = Field(None, description="The LLM provider to use for interpretation")
+    llm_model: Optional[str] = Field(None, description="The LLM model to use for interpretation")
+
+
+class FlowResponse(BaseModel):
+    """Response model for a flow built from an instruction."""
+
+    instruction: str = Field(..., description="The original instruction")
+    interpretation: Dict[str, Any] = Field(..., description="The interpreted instruction details")
+    flow: Dict[str, Any] = Field(..., description="The flow data")
+
+
+class ClarificationRequest(BaseModel):
+    """Request model for responding to a clarification question."""
+
+    question_id: str = Field(..., description="The ID of the question being answered")
+    response: str = Field(..., description="The user's response to the question")
+    instruction: str = Field(..., description="The original instruction")
+
+
+class ClarificationResponse(BaseModel):
+    """Response model for a clarification response."""
+
+    question_id: str = Field(..., description="The ID of the question that was answered")
+    response: str = Field(..., description="The user's response to the question")
+    processed: bool = Field(..., description="Whether the response was successfully processed")
+    updated_interpretation: Dict[str, Any] = Field(..., description="The updated interpretation")
+
+
+class ComponentInfoRequest(BaseModel):
+    """Request model for getting component information."""
+
+    component_type: str = Field(..., description="The type of the component")
+    component_name: str = Field(..., description="The name of the component")
+
+
+class CompatibleComponentsRequest(BaseModel):
+    """Request model for getting compatible components."""
+
+    component_type: str = Field(..., description="The type of the component")
+    component_name: str = Field(..., description="The name of the component")
+
+
+class LLMProviderRequest(BaseModel):
+    """Request model for setting the LLM provider."""
+
+    provider_name: str = Field(..., description="The name of the LLM provider")
+    model_name: str = Field(..., description="The name of the model to use")
+
+
+def get_ai_assistant_service() -> AIAssistantService:
+    """Get the AI Assistant Service instance.
+
+    Returns:
+        The AI Assistant Service instance.
+    """
+    from langflow.services.deps import get_service
+    from langflow.services.deps import ServiceType
+
+    # Check if service exists
+    service = get_service(ServiceType.AI_ASSISTANT_SERVICE)
+
+    # If not, create it
+    if service is None:
+        settings_service = get_settings_service()
+        service = AIAssistantService(settings_service)
+
+    return service
+
+
+@router.post("/interpret", response_model=InstructionResponse,
+            dependencies=[Depends(get_current_active_user)])
+async def interpret_instruction(
+    request: InstructionRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> InstructionResponse:
+    """Interpret a natural language instruction.
+
+    Args:
+        request: The instruction request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        The interpreted instruction details.
+    """
+    try:
+        # Set the LLM provider and model if specified
+        if request.llm_provider and request.llm_model:
+            await ai_assistant_service.set_llm_provider(request.llm_provider, request.llm_model)
+
+        # Interpret the instruction
+        interpretation = await ai_assistant_service.interpret_instruction(request.instruction)
+        return InstructionResponse(**interpretation)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interpreting instruction: {str(e)}"
+        )
+
+
+@router.post("/build-flow", response_model=FlowResponse,
+            dependencies=[Depends(get_current_active_user)])
+async def build_flow(
+    request: FlowRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> FlowResponse:
+    """Build a flow from a natural language instruction.
+
+    Args:
+        request: The flow request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        The flow data.
+    """
+    try:
+        # Set the LLM provider and model if specified
+        if request.llm_provider and request.llm_model:
+            await ai_assistant_service.set_llm_provider(request.llm_provider, request.llm_model)
+
+        # Build the flow
+        flow_data = await ai_assistant_service.build_flow_from_instruction(request.instruction)
+        return FlowResponse(**flow_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error building flow: {str(e)}"
+        )
+
+
+@router.post("/clarify", response_model=ClarificationResponse,
+            dependencies=[Depends(get_current_active_user)])
+async def process_clarification(
+    request: ClarificationRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> ClarificationResponse:
+    """Process a response to a clarification question.
+
+    Args:
+        request: The clarification request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        The updated interpretation.
+    """
+    try:
+        # Process the clarification response
+        result = await ai_assistant_service.process_clarification_response(
+            request.question_id, request.response)
+        return ClarificationResponse(**result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing clarification: {str(e)}"
+        )
+
+
+@router.post("/component-info", dependencies=[Depends(get_current_active_user)])
+async def get_component_info(
+    request: ComponentInfoRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> Dict[str, Any]:
+    """Get information about a specific component.
+
+    Args:
+        request: The component info request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        Information about the component.
+    """
+    try:
+        component_info = await ai_assistant_service.get_component_info(
+            request.component_type, request.component_name)
+        return component_info
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting component info: {str(e)}"
+        )
+
+
+@router.post("/compatible-components", dependencies=[Depends(get_current_active_user)])
+async def get_compatible_components(
+    request: CompatibleComponentsRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> List[Dict[str, Any]]:
+    """Get a list of components that are compatible with the specified component.
+
+    Args:
+        request: The compatible components request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        A list of compatible components.
+    """
+    try:
+        compatible_components = await ai_assistant_service.get_compatible_components(
+            request.component_type, request.component_name)
+        return compatible_components
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting compatible components: {str(e)}"
+        )
+
+
+@router.get("/llm-providers", dependencies=[Depends(get_current_active_user)])
+async def get_llm_providers(
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> Dict[str, List[str]]:
+    """Get a list of available LLM providers and models.
+
+    Args:
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        A dictionary mapping provider names to lists of model names.
+    """
+    try:
+        providers = await ai_assistant_service.get_available_llm_providers()
+        return providers
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting LLM providers: {str(e)}"
+        )
+
+
+@router.post("/set-llm-provider", dependencies=[Depends(get_current_active_user)])
+async def set_llm_provider(
+    request: LLMProviderRequest,
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> Dict[str, str]:
+    """Set the LLM provider and model to use for instruction parsing.
+
+    Args:
+        request: The LLM provider request.
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        A confirmation message.
+    """
+    try:
+        await ai_assistant_service.set_llm_provider(request.provider_name, request.model_name)
+        return {
+            "message": f"LLM provider set to {request.provider_name} with model {request.model_name}",
+            "provider": request.provider_name,
+            "model": request.model_name
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error setting LLM provider: {str(e)}"
+        )

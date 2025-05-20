@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.ai_assistant.service import AIAssistantService
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -247,3 +248,14 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_ai_assistant_service() -> AIAssistantService:
+    """Retrieves the AI Assistant Service instance from the service manager.
+
+    Returns:
+        AIAssistantService: The AI Assistant Service instance.
+    """
+    from langflow.services.ai_assistant.factory import AIAssistantServiceFactory
+
+    return get_service(ServiceType.AI_ASSISTANT_SERVICE, AIAssistantServiceFactory())
