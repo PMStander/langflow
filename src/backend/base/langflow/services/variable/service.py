@@ -105,6 +105,21 @@ class DatabaseVariableService(VariableService, Service):
         variables = await self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]
 
+    async def list_variables_by_type(self, user_id: UUID | str, type_: str, session: AsyncSession) -> list[Variable]:
+        """List all variables of a specific type for a user.
+
+        Args:
+            user_id: The user ID.
+            type_: The type of variables to list (e.g., 'credential', 'generic').
+            session: The database session.
+
+        Returns:
+            A list of Variable objects of the specified type.
+        """
+        stmt = select(Variable).where(Variable.user_id == user_id, Variable.type == type_)
+        variables = list((await session.exec(stmt)).all())
+        return variables
+
     async def update_variable(
         self,
         user_id: UUID | str,

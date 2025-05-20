@@ -20,11 +20,11 @@ if TYPE_CHECKING:
 
 class ComponentRequirement(BaseModel):
     """A requirement for a component in a flow.
-    
+
     This class represents a component that should be included in a flow,
     along with its configuration parameters.
     """
-    
+
     component_type: str = Field(..., description="The type of the component (e.g., 'llms', 'chains')")
     component_name: str = Field(..., description="The name of the component (e.g., 'openai', 'llm_chain')")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for the component")
@@ -33,11 +33,11 @@ class ComponentRequirement(BaseModel):
 
 class ConnectionRequirement(BaseModel):
     """A requirement for a connection between components in a flow.
-    
+
     This class represents a connection that should be created between two components
     in a flow, specifying the source and target components and fields.
     """
-    
+
     source_component_idx: int = Field(..., description="The index of the source component in the components list")
     target_component_idx: int = Field(..., description="The index of the target component in the components list")
     source_field: str = Field("output", description="The output field of the source component")
@@ -47,11 +47,11 @@ class ConnectionRequirement(BaseModel):
 
 class ClarificationQuestion(BaseModel):
     """A question to ask the user for clarification.
-    
+
     This class represents a question that should be asked to the user to clarify
     ambiguous or incomplete instructions.
     """
-    
+
     question_id: str = Field(..., description="A unique identifier for the question")
     question: str = Field(..., description="The question to ask the user")
     options: List[str] = Field(default_factory=list, description="Possible options for the answer")
@@ -60,11 +60,11 @@ class ClarificationQuestion(BaseModel):
 
 class ParsedInstruction(BaseModel):
     """The result of parsing a natural language instruction.
-    
+
     This class contains the extracted components, connections, and any clarification
     questions that need to be asked.
     """
-    
+
     instruction: str = Field(..., description="The original instruction")
     components: List[ComponentRequirement] = Field(default_factory=list, description="Required components")
     connections: List[ConnectionRequirement] = Field(default_factory=list, description="Required connections")
@@ -76,14 +76,14 @@ class ParsedInstruction(BaseModel):
 
 class InstructionParser:
     """Parser for natural language instructions.
-    
+
     This class interprets natural language instructions and extracts key requirements
     for flow construction, including components, connections, and parameters.
     """
-    
+
     def __init__(self, knowledge_base: ComponentKnowledgeBase, settings_service: SettingsService):
         """Initialize the InstructionParser.
-        
+
         Args:
             knowledge_base: The component knowledge base.
             settings_service: The settings service for accessing LLM configurations.
@@ -92,41 +92,41 @@ class InstructionParser:
         self.settings_service = settings_service
         self.llm_provider = None
         self.llm_model = None
-    
+
     async def set_llm_provider(self, provider_name: str, model_name: str) -> None:
         """Set the LLM provider and model to use for instruction parsing.
-        
+
         Args:
             provider_name: The name of the LLM provider (e.g., 'OpenAI', 'Anthropic').
             model_name: The name of the model to use.
         """
         self.llm_provider = provider_name
         self.llm_model = model_name
-    
+
     async def parse_instruction(self, instruction: str) -> ParsedInstruction:
         """Parse a natural language instruction.
-        
+
         Args:
             instruction: The natural language instruction to parse.
-            
+
         Returns:
             A ParsedInstruction object containing the extracted components, connections,
             and any clarification questions.
         """
         logger.info(f"Parsing instruction: {instruction}")
-        
+
         try:
             # Get the LLM response
             llm_response = await self._get_llm_response(instruction)
-            
+
             # Parse the LLM response
             parsed_instruction = await self._parse_llm_response(instruction, llm_response)
-            
+
             # Validate the parsed instruction
             parsed_instruction = await self._validate_parsed_instruction(parsed_instruction)
-            
+
             return parsed_instruction
-        
+
         except Exception as e:
             logger.error(f"Error parsing instruction: {str(e)}")
             # Return a basic parsed instruction with an error message
@@ -140,23 +140,23 @@ class InstructionParser:
                     )
                 ],
             )
-    
+
     async def _get_llm_response(self, instruction: str) -> str:
         """Get a response from the LLM for the given instruction.
-        
+
         Args:
             instruction: The natural language instruction.
-            
+
         Returns:
             The LLM response as a string.
         """
         # Use the configured LLM provider and model
         provider = self.llm_provider or "OpenAI"
         model = self.llm_model or "gpt-4"
-        
+
         # Get the prompt for instruction parsing
         prompt = self._get_instruction_parsing_prompt(instruction)
-        
+
         # Call the appropriate LLM based on the provider
         if provider.lower() == "openai":
             return await self._call_openai(prompt, model)
@@ -166,121 +166,148 @@ class InstructionParser:
             # Default to OpenAI
             logger.warning(f"Unsupported LLM provider: {provider}. Falling back to OpenAI.")
             return await self._call_openai(prompt, model)
-    
+
     async def _call_openai(self, prompt: str, model: str) -> str:
         """Call the OpenAI API to get a response.
-        
+
         Args:
             prompt: The prompt to send to the API.
             model: The model to use.
-            
+
         Returns:
             The API response as a string.
         """
         try:
             from langchain_openai import ChatOpenAI
             from langchain_core.messages import HumanMessage, SystemMessage
-            
+
             # Get API key from settings
-            api_key = self._get_api_key("OPENAI_API_KEY")
-            
+            api_key = await self._get_api_key("OPENAI_API_KEY")
+
             # Create the ChatOpenAI instance
             chat = ChatOpenAI(
                 model=model,
                 temperature=0.2,
                 api_key=api_key,
             )
-            
+
             # Create the messages
             messages = [
                 SystemMessage(content="You are an AI assistant that helps users build LangChain flows. Your task is to interpret natural language instructions and extract the components, connections, and parameters needed to build a flow."),
                 HumanMessage(content=prompt),
             ]
-            
+
             # Get the response
             response = chat.invoke(messages)
-            
+
             return response.content
-        
+
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {str(e)}")
             raise
-    
+
     async def _call_anthropic(self, prompt: str, model: str) -> str:
         """Call the Anthropic API to get a response.
-        
+
         Args:
             prompt: The prompt to send to the API.
             model: The model to use.
-            
+
         Returns:
             The API response as a string.
         """
         try:
             from langchain_anthropic import ChatAnthropic
             from langchain_core.messages import HumanMessage, SystemMessage
-            
+
             # Get API key from settings
-            api_key = self._get_api_key("ANTHROPIC_API_KEY")
-            
+            api_key = await self._get_api_key("ANTHROPIC_API_KEY")
+
             # Create the ChatAnthropic instance
             chat = ChatAnthropic(
                 model=model,
                 temperature=0.2,
                 anthropic_api_key=api_key,
             )
-            
+
             # Create the messages
             messages = [
                 SystemMessage(content="You are an AI assistant that helps users build LangChain flows. Your task is to interpret natural language instructions and extract the components, connections, and parameters needed to build a flow."),
                 HumanMessage(content=prompt),
             ]
-            
+
             # Get the response
             response = chat.invoke(messages)
-            
+
             return response.content
-        
+
         except Exception as e:
             logger.error(f"Error calling Anthropic API: {str(e)}")
             raise
-    
-    def _get_api_key(self, key_name: str) -> str:
+
+    async def _get_api_key(self, key_name: str) -> str:
         """Get an API key from the settings.
-        
+
         Args:
             key_name: The name of the API key to get.
-            
+
         Returns:
             The API key as a string.
         """
         import os
-        
+        from uuid import UUID
+        from sqlalchemy.ext.asyncio import AsyncSession
+
         # Try to get the API key from environment variables
         api_key = os.environ.get(key_name)
-        
+
         if not api_key:
-            # If not found, try to get it from the settings service
-            # This is a placeholder - in a real implementation, we would get it from the settings service
-            logger.warning(f"API key {key_name} not found in environment variables.")
-            
-            # For now, return a placeholder
+            try:
+                # Get the variable service
+                from langflow.services.deps import get_variable_service, get_session
+                from langflow.services.auth.utils import get_current_user
+
+                # Get the current user and session
+                session = get_session()
+                user = await get_current_user(session=session)
+
+                if user:
+                    # Get the variable service
+                    variable_service = get_variable_service()
+
+                    # Try to get the API key from the variable service
+                    try:
+                        api_key = await variable_service.get_variable(
+                            user_id=user.id,
+                            name=key_name,
+                            field=key_name.lower(),
+                            session=session
+                        )
+                        logger.info(f"Retrieved {key_name} from variable service")
+                    except Exception as e:
+                        logger.warning(f"Error getting {key_name} from variable service: {str(e)}")
+            except Exception as e:
+                logger.warning(f"Error accessing variable service: {str(e)}")
+
+        if not api_key:
+            logger.warning(f"API key {key_name} not found in environment variables or variable service.")
+            # Return a placeholder - in production, you would want to handle this differently
             api_key = "placeholder"
-        
+
         return api_key
-    
+
     def _get_instruction_parsing_prompt(self, instruction: str) -> str:
         """Get the prompt for instruction parsing.
-        
+
         Args:
             instruction: The natural language instruction.
-            
+
         Returns:
             The prompt as a string.
         """
         # Get the available component types and names
         component_info = self._get_component_info()
-        
+
         # Create the prompt
         prompt = f"""
 I want you to help me build a LangChain flow based on the following instruction:
@@ -302,47 +329,47 @@ Please respond with a JSON object that includes the following:
 
 Only respond with the JSON object, no additional text.
 """
-        
+
         return prompt
-    
+
     def _get_component_info(self) -> str:
         """Get information about available components.
-        
+
         Returns:
             A string containing information about available component types and names.
         """
         component_info = []
-        
+
         # Add information for each component category
         for category, components in self.knowledge_base.components.items():
             component_names = list(components.keys())
             component_info.append(f"- {category}: {', '.join(component_names)}")
-        
+
         return "\n".join(component_info)
-    
+
     async def _parse_llm_response(self, instruction: str, llm_response: str) -> ParsedInstruction:
         """Parse the LLM response into a ParsedInstruction object.
-        
+
         Args:
             instruction: The original instruction.
             llm_response: The response from the LLM.
-            
+
         Returns:
             A ParsedInstruction object.
         """
         try:
             # Extract the JSON object from the response
             json_str = llm_response.strip()
-            
+
             # If the response is wrapped in ```json and ```, extract the JSON
             if json_str.startswith("```json"):
                 json_str = json_str.split("```json")[1].split("```")[0].strip()
             elif json_str.startswith("```"):
                 json_str = json_str.split("```")[1].split("```")[0].strip()
-            
+
             # Parse the JSON
             data = json.loads(json_str)
-            
+
             # Create the ParsedInstruction object
             parsed_instruction = ParsedInstruction(
                 instruction=instruction,
@@ -353,20 +380,20 @@ Only respond with the JSON object, no additional text.
                 clarification_questions=[ClarificationQuestion(**q) for q in data.get("clarification_questions", [])],
                 flow_description=data.get("flow_description", ""),
             )
-            
+
             return parsed_instruction
-        
+
         except Exception as e:
             logger.error(f"Error parsing LLM response: {str(e)}")
             logger.debug(f"LLM response: {llm_response}")
             raise
-    
+
     async def _validate_parsed_instruction(self, parsed_instruction: ParsedInstruction) -> ParsedInstruction:
         """Validate the parsed instruction and add any necessary clarification questions.
-        
+
         Args:
             parsed_instruction: The parsed instruction to validate.
-            
+
         Returns:
             The validated parsed instruction.
         """
@@ -374,7 +401,7 @@ Only respond with the JSON object, no additional text.
         for i, component in enumerate(parsed_instruction.components):
             component_type = component.component_type
             component_name = component.component_name
-            
+
             # Check if the component type exists
             if component_type not in self.knowledge_base.components:
                 parsed_instruction.clarification_needed = True
@@ -387,7 +414,7 @@ Only respond with the JSON object, no additional text.
                     )
                 )
                 continue
-            
+
             # Check if the component name exists
             if component_name not in self.knowledge_base.components[component_type]:
                 parsed_instruction.clarification_needed = True
@@ -399,12 +426,12 @@ Only respond with the JSON object, no additional text.
                         context={"component_idx": i, "component_type": component_type},
                     )
                 )
-        
+
         # Check if connections are valid
         for i, connection in enumerate(parsed_instruction.connections):
             source_idx = connection.source_component_idx
             target_idx = connection.target_component_idx
-            
+
             # Check if the indices are valid
             if source_idx < 0 or source_idx >= len(parsed_instruction.components):
                 parsed_instruction.clarification_needed = True
@@ -416,7 +443,7 @@ Only respond with the JSON object, no additional text.
                     )
                 )
                 continue
-            
+
             if target_idx < 0 or target_idx >= len(parsed_instruction.components):
                 parsed_instruction.clarification_needed = True
                 parsed_instruction.clarification_questions.append(
@@ -427,15 +454,15 @@ Only respond with the JSON object, no additional text.
                     )
                 )
                 continue
-            
+
             # Get the source and target components
             source_component = parsed_instruction.components[source_idx]
             target_component = parsed_instruction.components[target_idx]
-            
+
             # Check if the connection is valid
             source_id = f"{source_component.component_type}.{source_component.component_name}"
             target_id = f"{target_component.component_type}.{target_component.component_name}"
-            
+
             if source_id not in self.knowledge_base.connection_graph or target_id not in self.knowledge_base.connection_graph[source_id]:
                 parsed_instruction.clarification_needed = True
                 parsed_instruction.clarification_questions.append(
@@ -445,5 +472,5 @@ Only respond with the JSON object, no additional text.
                         context={"connection_idx": i},
                     )
                 )
-        
+
         return parsed_instruction

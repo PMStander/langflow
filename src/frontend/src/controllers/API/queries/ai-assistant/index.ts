@@ -85,6 +85,15 @@ export interface LLMProviderRequest {
   model_name: string;
 }
 
+export interface APIKeyRequest {
+  key_name: string;
+  api_key: string;
+}
+
+export interface APIKeysResponse {
+  api_keys: string[];
+}
+
 // Query to interpret an instruction
 export const useInterpretInstructionMutation: useMutationFunctionType<
   InstructionRequest,
@@ -232,4 +241,60 @@ export const useSetLLMProviderMutation: useMutationFunctionType<
     LLMProviderRequest,
     unknown
   >;
+};
+
+// Mutation to save an API key
+export const useSaveAPIKeyMutation: useMutationFunctionType<
+  APIKeyRequest,
+  { message: string; key_name: string }
+> = (options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const saveAPIKeyFn = async (request: APIKeyRequest) => {
+    const response = await api.post<{ message: string; key_name: string }>(
+      `${getURL("AI_ASSISTANT")}/save-api-key`,
+      request
+    );
+    return response.data;
+  };
+
+  const mutationResult = mutate(
+    ["useSaveAPIKeyMutation"],
+    saveAPIKeyFn,
+    {
+      ...options,
+    }
+  );
+
+  return mutationResult as UseMutationResult<
+    { message: string; key_name: string },
+    Error,
+    APIKeyRequest,
+    unknown
+  >;
+};
+
+// Query to get saved API keys
+export const useGetAPIKeysQuery: useQueryFunctionType<
+  undefined,
+  APIKeysResponse
+> = (options) => {
+  const { query } = UseRequestProcessor();
+
+  const getAPIKeysFn = async () => {
+    const response = await api.get<APIKeysResponse>(
+      `${getURL("AI_ASSISTANT")}/api-keys`
+    );
+    return response.data;
+  };
+
+  const queryResult = query(
+    ["useGetAPIKeysQuery"],
+    getAPIKeysFn,
+    {
+      ...options,
+    }
+  );
+
+  return queryResult;
 };

@@ -263,12 +263,35 @@ class AIAssistantService(Service):
         Returns:
             A dictionary mapping provider names to lists of model names.
         """
-        # This is a simplified implementation - in a real implementation,
-        # we would get this information from the settings service
-        return {
-            "OpenAI": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"],
-            "Anthropic": ["claude-2", "claude-instant-1", "claude-3-opus", "claude-3-sonnet"],
-        }
+        if not self.initialized:
+            await self.initialize()
+
+        # Get all LLM providers from the component registry
+        llm_providers = {}
+
+        # Get language model components from the knowledge base
+        language_model_components = self.knowledge_base.get_components_by_type("LLM")
+
+        for component in language_model_components:
+            # Extract provider information from component metadata
+            if hasattr(component, "inputs"):
+                provider_input = next((inp for inp in component.inputs if inp.name == "provider"), None)
+                if provider_input and hasattr(provider_input, "options"):
+                    for provider in provider_input.options:
+                        if provider not in llm_providers:
+                            # Find the corresponding model input for this provider
+                            model_input = next((inp for inp in component.inputs if inp.name == "model_name"), None)
+                            if model_input and hasattr(model_input, "options"):
+                                llm_providers[provider] = model_input.options
+
+        # If no providers were found, fall back to defaults
+        if not llm_providers:
+            llm_providers = {
+                "OpenAI": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"],
+                "Anthropic": ["claude-2", "claude-instant-1", "claude-3-opus", "claude-3-sonnet"],
+            }
+
+        return llm_providers
 
     async def teardown(self) -> None:
         """Clean up resources used by the AI Assistant Service."""

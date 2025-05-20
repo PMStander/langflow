@@ -10,6 +10,7 @@ import {
   PORT,
   PROXY_TARGET,
 } from "./src/customization/config-constants";
+import { Plugin } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");

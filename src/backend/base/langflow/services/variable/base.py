@@ -117,3 +117,16 @@ class VariableService(Service):
             user_id: The user ID.
             session: The database session.
         """
+
+    @abc.abstractmethod
+    async def list_variables_by_type(self, user_id: UUID | str, type_: str, session: AsyncSession) -> list[Variable]:
+        """List all variables of a specific type for a user.
+
+        Args:
+            user_id: The user ID.
+            type_: The type of variables to list (e.g., 'credential', 'generic').
+            session: The database session.
+
+        Returns:
+            A list of Variable objects of the specified type.
+        """

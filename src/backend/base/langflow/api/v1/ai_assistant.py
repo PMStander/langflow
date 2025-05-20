@@ -319,3 +319,116 @@ async def set_llm_provider(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error setting LLM provider: {str(e)}"
         )
+
+
+class APIKeyRequest(BaseModel):
+    """Request model for saving an API key."""
+
+    key_name: str = Field(..., description="The name of the API key (e.g., 'OPENAI_API_KEY')")
+    api_key: str = Field(..., description="The API key value")
+
+
+@router.post("/save-api-key", dependencies=[Depends(get_current_active_user)])
+async def save_api_key(
+    request: APIKeyRequest,
+    current_user = Depends(get_current_active_user)
+) -> Dict[str, str]:
+    """Save an API key for the AI Assistant.
+
+    This endpoint saves an API key to the variable service for use by the AI Assistant.
+    The key will be associated with the current user and will persist between sessions.
+
+    Args:
+        request: The API key request containing the key name and value.
+        current_user: The current authenticated user.
+
+    Returns:
+        A confirmation message.
+    """
+    try:
+        from langflow.services.deps import get_variable_service, get_session
+        from sqlalchemy import select
+        from langflow.services.database.models.variable import Variable
+
+        # Get the variable service and session
+        variable_service = get_variable_service()
+        session = get_session()
+
+        # Check if the variable already exists
+        stmt = select(Variable).where(Variable.user_id == current_user.id, Variable.name == request.key_name)
+        existing_variable = (await session.execute(stmt)).first()
+
+        if existing_variable:
+            # Update the existing variable
+            await variable_service.update_variable(
+                user_id=current_user.id,
+                name=request.key_name,
+                value=request.api_key,
+                session=session
+            )
+        else:
+            # Create a new variable
+            await variable_service.create_variable(
+                user_id=current_user.id,
+                name=request.key_name,
+                value=request.api_key,
+                default_fields=[request.key_name.lower()],
+                type_="credential",
+                session=session
+            )
+
+        return {
+            "message": f"API key {request.key_name} saved successfully",
+            "key_name": request.key_name
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error saving API key: {str(e)}"
+        )
+
+
+@router.get("/api-keys", dependencies=[Depends(get_current_active_user)])
+async def get_api_keys(
+    current_user = Depends(get_current_active_user)
+) -> Dict[str, List[str]]:
+    """Get the saved API keys for the AI Assistant.
+
+    This endpoint retrieves the names of API keys saved for the current user.
+    The actual key values are not returned for security reasons.
+
+    Args:
+        current_user: The current authenticated user.
+
+    Returns:
+        A dictionary with a list of API key names.
+    """
+    try:
+        from langflow.services.deps import get_variable_service, get_session
+        from langflow.services.variable.constants import CREDENTIAL_TYPE
+
+        # Get the variable service and session
+        variable_service = get_variable_service()
+        session = get_session()
+
+        # Get all variables for the user
+        variables = await variable_service.list_variables_by_type(
+            user_id=current_user.id,
+            type_=CREDENTIAL_TYPE,
+            session=session
+        )
+
+        # Filter for API keys (variables that match common API key patterns)
+        api_key_names = []
+        for variable in variables:
+            if variable.name.endswith("_API_KEY") or variable.name.endswith("_KEY"):
+                api_key_names.append(variable.name)
+
+        return {
+            "api_keys": api_key_names
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting API keys: {str(e)}"
+        )

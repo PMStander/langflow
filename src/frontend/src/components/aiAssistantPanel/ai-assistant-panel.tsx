@@ -10,6 +10,7 @@ import InstructionInput from "./components/instruction-input";
 import ChatInterface from "./components/chat-interface";
 import FlowPreview from "./components/flow-preview";
 import LLMProviderSelector from "./components/llm-provider-selector";
+import APIKeyManager from "./components/api-key-manager";
 import { cn } from "../../utils/utils";
 
 export default function AIAssistantPanel() {
@@ -32,11 +33,11 @@ export default function AIAssistantPanel() {
     if (llmProviders && Object.keys(llmProviders).length > 0) {
       const firstProvider = Object.keys(llmProviders)[0];
       const firstModel = llmProviders[firstProvider][0];
-      
+
       if (!llmProvider || !Object.keys(llmProviders).includes(llmProvider)) {
         setLLMProvider(firstProvider);
       }
-      
+
       if (!llmModel || !llmProviders[llmProvider]?.includes(llmModel)) {
         setLLMModel(firstModel);
       }
@@ -86,7 +87,7 @@ export default function AIAssistantPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col p-4">
+      <div className="flex flex-col p-4 space-y-4">
         <LLMProviderSelector
           providers={llmProviders || {}}
           selectedProvider={llmProvider}
@@ -95,6 +96,8 @@ export default function AIAssistantPanel() {
           onModelChange={setLLMModel}
           isLoading={isLoadingProviders}
         />
+
+        <APIKeyManager />
       </div>
 
       <Separator />

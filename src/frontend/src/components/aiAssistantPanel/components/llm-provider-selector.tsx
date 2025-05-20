@@ -28,7 +28,7 @@ export default function LLMProviderSelector({
   isLoading,
 }: LLMProviderSelectorProps) {
   const { toast } = useToast();
-  
+
   const { mutate: setLLMProvider, isLoading: isSettingProvider } = useSetLLMProviderMutation({
     onSuccess: (data) => {
       toast({
@@ -73,18 +73,36 @@ export default function LLMProviderSelector({
             disabled={isLoading || isSettingProvider || Object.keys(providers).length === 0}
           >
             <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Select provider" />
+              <SelectValue placeholder="Select provider">
+                {selectedProvider && (
+                  <div className="flex items-center gap-2">
+                    <IconComponent
+                      name={selectedProvider}
+                      className="h-4 w-4"
+                      skipFallback={true}
+                    />
+                    {selectedProvider}
+                  </div>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {Object.keys(providers).map((provider) => (
                 <SelectItem key={provider} value={provider}>
-                  {provider}
+                  <div className="flex items-center gap-2">
+                    <IconComponent
+                      name={provider}
+                      className="h-4 w-4"
+                      skipFallback={true}
+                    />
+                    {provider}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex-1">
           <label className="text-sm font-medium">Model</label>
           <Select
@@ -112,7 +130,7 @@ export default function LLMProviderSelector({
           </Select>
         </div>
       </div>
-      
+
       {(isLoading || isSettingProvider) && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <IconComponent name="Loader2" className="h-3 w-3 animate-spin" />
