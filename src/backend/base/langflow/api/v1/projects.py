@@ -153,45 +153,38 @@ async def read_project(
             if search:
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
             
-            # Suppress deprecation warnings from fastapi_pagination
-            import warnings
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            try:
+                paginated_flows = await apaginate(session, stmt, params=params)
+                
+                # Convert Flow objects to FlowRead objects to ensure they're properly serialized
+                if hasattr(paginated_flows, 'items'):
+                    paginated_flows.items = [FlowRead.model_validate(flow, from_attributes=True) for flow in paginated_flows.items]
+                
+                return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
+            except Exception as pagination_error:
+                # Log the pagination error but return unpaginated results
+                import logging
+                logging.error(f"Pagination error: {str(pagination_error)}")
+                
+                # Fall back to unpaginated results - fetch all flows without pagination
+                flows = await session.execute(stmt)
+                flows = flows.scalars().all()
+                
+                # Convert Flow objects to FlowRead objects
+                flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
+                
+                # Create a paginated-like result using the Page class from fastapi_pagination
+                from fastapi_pagination import Page
+                
+                unpaginated_results = Page(
+                    items=flow_reads,
+                    total=len(flow_reads),
+                    page=params.page if params else 1,
+                    size=params.size if params else len(flow_reads),
+                    pages=1  # Single page when using fallback
                 )
                 
-                try:
-                    paginated_flows = await apaginate(session, stmt, params=params)
-                    
-                    # Convert Flow objects to FlowRead objects to ensure they're properly serialized
-                    if hasattr(paginated_flows, 'items'):
-                        paginated_flows.items = [FlowRead.model_validate(flow, from_attributes=True) for flow in paginated_flows.items]
-                    
-                    return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
-                except Exception as pagination_error:
-                    # Log the pagination error but return unpaginated results
-                    import logging
-                    logging.error(f"Pagination error: {str(pagination_error)}")
-                    
-                    # Fall back to unpaginated results - fetch all flows without pagination
-                    flows = await session.execute(stmt)
-                    flows = flows.scalars().all()
-                    
-                    # Convert Flow objects to FlowRead objects
-                    flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
-                    
-                    # Create a paginated-like result using the Page class from fastapi_pagination
-                    from fastapi_pagination import Page
-                    
-                    unpaginated_results = Page(
-                        items=flow_reads,
-                        total=len(flow_reads),
-                        page=params.page if params else 1,
-                        size=params.size if params else len(flow_reads),
-                        pages=1  # Single page when using fallback
-                    )
-                    
-                    return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=unpaginated_results)
+                return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=unpaginated_results)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

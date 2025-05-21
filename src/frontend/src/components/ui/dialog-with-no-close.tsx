@@ -4,7 +4,31 @@ import { cn } from "../../utils/utils";
 
 const Dialog = DialogPrimitive.Root;
 
-const DialogTrigger = DialogPrimitive.Trigger;
+// Custom DialogTrigger that automatically uses asChild when children is a button
+const DialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>
+>(({ children, asChild = false, ...props }, ref) => {
+  // Check if children is a button or contains a button
+  const childIsButton = React.isValidElement(children) &&
+    ((children.type as any)?.displayName === 'Button' ||
+     (children.type as any)?.name === 'Button' ||
+     (children.type as any) === 'button' ||
+     ((children.type as any)?.displayName || (children.type as any)?.name || '').toLowerCase().includes('button'));
+
+  // If children is a button, always use asChild=true to avoid nesting buttons
+  const shouldUseAsChild = asChild || childIsButton;
+
+  return (
+    <DialogPrimitive.Trigger
+      ref={ref}
+      asChild={shouldUseAsChild}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Trigger>
+  );
+});
 
 const DialogPortal = ({ ...props }: DialogPrimitive.DialogPortalProps) => (
   <DialogPrimitive.Portal {...props} />

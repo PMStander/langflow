@@ -157,6 +157,13 @@ async def interpret_instruction(
         # Interpret the instruction
         interpretation = await ai_assistant_service.interpret_instruction(request.instruction)
         return InstructionResponse(**interpretation)
+    except ValueError as e:
+        # This is likely an API key error, which we want to show to the user with a 400 status
+        # so the frontend can display it properly
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -187,6 +194,13 @@ async def build_flow(
         # Build the flow
         flow_data = await ai_assistant_service.build_flow_from_instruction(request.instruction)
         return FlowResponse(**flow_data)
+    except ValueError as e:
+        # This is likely an API key error, which we want to show to the user with a 400 status
+        # so the frontend can display it properly
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -346,41 +360,50 @@ async def save_api_key(
         A confirmation message.
     """
     try:
-        from langflow.services.deps import get_variable_service, get_session
+        from langflow.services.deps import get_variable_service, get_db_service
         from sqlalchemy import select
         from langflow.services.database.models.variable import Variable
+        from langflow.services.variable.constants import CREDENTIAL_TYPE
+        from loguru import logger
 
-        # Get the variable service and session
+        # Get the variable service
         variable_service = get_variable_service()
-        session = get_session()
+        db_service = get_db_service()
 
-        # Check if the variable already exists
-        stmt = select(Variable).where(Variable.user_id == current_user.id, Variable.name == request.key_name)
-        existing_variable = (await session.execute(stmt)).first()
+        logger.debug(f"Saving API key {request.key_name} for user {current_user.id}")
 
-        if existing_variable:
-            # Update the existing variable
-            await variable_service.update_variable(
-                user_id=current_user.id,
-                name=request.key_name,
-                value=request.api_key,
-                session=session
-            )
-        else:
-            # Create a new variable
-            await variable_service.create_variable(
-                user_id=current_user.id,
-                name=request.key_name,
-                value=request.api_key,
-                default_fields=[request.key_name.lower()],
-                type_="credential",
-                session=session
-            )
+        # Use the session in a context manager
+        async with db_service.with_session() as session:
+            # Check if the variable already exists
+            stmt = select(Variable).where(Variable.user_id == current_user.id, Variable.name == request.key_name)
+            result = await session.execute(stmt)
+            existing_variable = result.scalar_one_or_none()
 
-        return {
-            "message": f"API key {request.key_name} saved successfully",
-            "key_name": request.key_name
-        }
+            if existing_variable:
+                logger.debug(f"Updating existing variable {request.key_name}")
+                # Update the existing variable
+                await variable_service.update_variable(
+                    user_id=current_user.id,
+                    name=request.key_name,
+                    value=request.api_key,
+                    session=session
+                )
+            else:
+                logger.debug(f"Creating new variable {request.key_name}")
+                # Create a new variable
+                await variable_service.create_variable(
+                    user_id=current_user.id,
+                    name=request.key_name,
+                    value=request.api_key,
+                    default_fields=[request.key_name.lower()],
+                    type_=CREDENTIAL_TYPE,
+                    session=session
+                )
+
+            return {
+                "message": f"API key {request.key_name} saved successfully",
+                "key_name": request.key_name
+            }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -406,25 +429,47 @@ async def get_api_keys(
     try:
         from langflow.services.deps import get_variable_service, get_db_service
         from langflow.services.variable.constants import CREDENTIAL_TYPE
+        from loguru import logger
 
         # Get the variable service
         variable_service = get_variable_service()
         db_service = get_db_service()
 
+        logger.debug(f"Getting API keys for user {current_user.id}")
+
         # Use the with_session context manager
         async with db_service.with_session() as session:
-            # Get all variables for the user
-            variables = await variable_service.list_variables_by_type(
-                user_id=current_user.id,
-                type_=CREDENTIAL_TYPE,
-                session=session
-            )
+            # Get all credential variables for the user (case insensitive check)
+            variables = []
+            from sqlmodel import select, or_
+            from langflow.services.database.models.variable import Variable
 
-            # Filter for API keys (variables that match common API key patterns)
-            api_key_names = []
-            for variable in variables:
-                if variable.name.endswith("_API_KEY") or variable.name.endswith("_KEY"):
-                    api_key_names.append(variable.name)
+            # Query directly to get ALL variables for the user first
+            stmt = select(Variable).where(Variable.user_id == current_user.id)
+            all_vars = list((await session.exec(stmt)).all())
+
+            # Filter for credential types (case insensitive) and normalized key names
+            seen_names_lower = set()
+            variables = []
+            for var in all_vars:
+                if var.type and var.type.lower() == CREDENTIAL_TYPE.lower():
+                    # Use lowercase name for deduplication to handle case variations
+                    if var.name.lower() not in seen_names_lower:
+                        seen_names_lower.add(var.name.lower())
+                        variables.append(var)
+
+            logger.debug(f"Found {len(variables)} credential variables: {[v.name for v in variables]}")
+
+            # Also try to get all variables for this user to see what types exist
+            all_vars_stmt = select(Variable).where(Variable.user_id == current_user.id)
+            all_vars = list((await session.exec(all_vars_stmt)).all())
+            logger.debug(f"Total variables for user: {len(all_vars)}")
+            logger.debug(f"Variable types: {set(v.type for v in all_vars if v.type)}")
+            logger.debug(f"All variables: {[(v.name, v.type, v.id) for v in all_vars]}")
+
+            # Return all credential variables as API keys without filtering
+            api_key_names = [variable.name for variable in variables]
+            logger.debug(f"Returning API key names: {api_key_names}")
 
             return {
                 "api_keys": api_key_names

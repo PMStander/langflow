@@ -46,7 +46,7 @@ export default function APIKeyManager() {
   const { data: apiKeysData, isLoading: isLoadingKeys, refetch: refetchApiKeys } = useGetAPIKeysQuery();
 
   // Save API key mutation
-  const { mutate: saveApiKey, isLoading: isSavingKey } = useSaveAPIKeyMutation({
+  const { mutate: saveApiKey, isPending: isSavingKey } = useSaveAPIKeyMutation({
     onSuccess: () => {
       toast({
         title: "API Key Saved",
@@ -63,14 +63,14 @@ export default function APIKeyManager() {
         variant: "destructive",
       });
     },
-  });
+  } as any);
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const keyName = isCustomKey ? customKeyName : selectedKeyName;
-    
+
     if (!keyName) {
       toast({
         title: "Error",
@@ -79,7 +79,7 @@ export default function APIKeyManager() {
       });
       return;
     }
-    
+
     if (!apiKeyValue) {
       toast({
         title: "Error",
@@ -88,11 +88,11 @@ export default function APIKeyManager() {
       });
       return;
     }
-    
+
     saveApiKey({
       key_name: keyName,
       api_key: apiKeyValue,
-    });
+    } as any);
   };
 
   return (
@@ -134,7 +134,7 @@ export default function APIKeyManager() {
                     </Select>
                   </div>
                 </div>
-                
+
                 {isCustomKey ? (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="customKeyName" className="text-right">
@@ -170,7 +170,7 @@ export default function APIKeyManager() {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="apiKey" className="text-right">
                     API Key
@@ -194,7 +194,7 @@ export default function APIKeyManager() {
           </DialogContent>
         </Dialog>
       </div>
-      
+
       <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
         {isLoadingKeys ? (
           <div className="text-sm text-muted-foreground p-2">Loading API keys...</div>

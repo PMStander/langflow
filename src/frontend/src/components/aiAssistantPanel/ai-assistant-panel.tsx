@@ -67,8 +67,8 @@ export default function AIAssistantPanel() {
   }
 
   return (
-    <div className="fixed bottom-0 right-0 z-50 flex h-[600px] w-[400px] flex-col rounded-tl-lg border border-border bg-background shadow-xl">
-      <div className="flex items-center justify-between border-b border-border p-4">
+    <div className="fixed bottom-0 right-0 z-50 flex h-[600px] w-[400px] flex-col rounded-tl-lg border border-border bg-background shadow-xl overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <IconComponent name="Bot" className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">AI Assistant</h2>
@@ -87,7 +87,7 @@ export default function AIAssistantPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col p-4 space-y-4">
+      <div className="flex flex-col p-4 space-y-4 flex-shrink-0">
         <LLMProviderSelector
           providers={llmProviders || {}}
           selectedProvider={llmProvider}
@@ -105,9 +105,9 @@ export default function AIAssistantPanel() {
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as any)}
-        className="flex-1 overflow-hidden"
+        className="flex-1 flex flex-col overflow-hidden"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
           <TabsTrigger value="instruction" className={cn(clarificationQuestions.length > 0 && "relative")}>
             Instruction
           </TabsTrigger>
@@ -126,7 +126,7 @@ export default function AIAssistantPanel() {
           <InstructionInput />
         </TabsContent>
 
-        <TabsContent value="chat" className="flex-1 overflow-hidden">
+        <TabsContent value="chat" className="flex-1 overflow-hidden flex flex-col h-full">
           <ChatInterface />
         </TabsContent>
 

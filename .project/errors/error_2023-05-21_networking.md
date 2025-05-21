@@ -4,49 +4,53 @@
 - **Date**: 2023-05-21
 - **Type**: Networking
 - **Component**: Frontend-Backend Communication
-- **Status**: Identified, Not Resolved
+- **Status**: Partially Resolved
 
 ## Description
-The Langflow application is experiencing connection issues between the frontend (running on port 3000) and the backend (running on port 7860). The frontend is unable to connect to the backend, resulting in ETIMEDOUT errors when attempting to connect to 127.0.0.1:7860.
+The Langflow application is experiencing connection issues between the frontend (running on port 3000) and the backend (running on port 7860). The frontend is unable to connect to the backend in certain contexts, resulting in ETIMEDOUT errors when attempting to connect to 127.0.0.1:7860.
 
 ## Symptoms
-- Frontend cannot connect to backend at 127.0.0.1:7860
+- Frontend cannot connect to backend at 127.0.0.1:7860 in certain contexts
 - ETIMEDOUT errors in network logs
 - Frontend cannot connect to backend at 0.0.0.0:7860 despite configuration updates
+- ECONNREFUSED errors when connecting to backend endpoints
+
+## Investigation Results
+1. **Backend Service**: Confirmed running on port 7860 and accessible directly via curl
+2. **Frontend Service**: Confirmed running on port 3000 and accessible
+3. **API Proxy**: Confirmed working for basic endpoints like /health and /api/v1/auto_login
+4. **Configuration**: Frontend proxy is correctly configured in vite.config.mts
+5. **Direct Access**: Backend is directly accessible at http://localhost:7860/health
+6. **Proxy Access**: Backend is accessible through frontend proxy at http://localhost:3000/health
+
+## Remaining Issues
+1. Some specific API endpoints may still experience connection issues
+2. The application UI may show connection errors despite the API endpoints being accessible
+3. IPv6 connections to ::1:7860 are being refused, but IPv4 connections to 127.0.0.1:7860 work
 
 ## Potential Causes
-1. **Network Configuration**: Incorrect host/port configuration in environment variables
-2. **Firewall Issues**: Firewall blocking connections between ports
-3. **Proxy Configuration**: Proxy settings interfering with local connections
-4. **CORS Settings**: Incorrect CORS configuration on the backend
-5. **Service Availability**: Backend service not running or not accessible
-6. **Docker Networking**: If using Docker, container networking issues
-
-## Investigation Steps
-1. Verify backend service is running on port 7860
-2. Check environment variables in `.env` file for correct configuration
-3. Examine network logs for specific error messages
-4. Test direct connection to backend using curl or similar tools
-5. Check firewall settings for port blocking
-6. Verify CORS configuration in backend settings
+1. **Network Configuration**: IPv6/IPv4 preference issues in the application
+2. **Proxy Configuration**: Proxy settings may not be correctly handling all routes
+3. **CORS Settings**: Potential CORS issues for specific endpoints
+4. **Connection Timing**: Possible timeout issues for larger responses
 
 ## Potential Solutions
-1. Update LANGFLOW_HOST in .env to use 0.0.0.0 instead of 127.0.0.1
-2. Ensure BACKEND_URL in .env matches the actual backend URL
-3. Check if backend is actually running and listening on the specified port
-4. Temporarily disable firewall to test if it's causing the issue
-5. Update CORS settings in backend to allow connections from frontend origin
+1. Update LANGFLOW_HOST in .env to explicitly use 127.0.0.1 instead of allowing IPv6
+2. Ensure BACKEND_URL in .env matches the actual backend URL (http://127.0.0.1:7860/)
+3. Update proxy configuration in vite.config.mts to handle all routes correctly
+4. Increase timeout settings for API requests
 
 ## Related Files
 - `.env`: Contains backend host and port configuration
-- `src/frontend/src/constants.ts`: May contain hardcoded backend URL
+- `src/frontend/src/customization/config-constants.ts`: Contains proxy target configuration
+- `src/frontend/vite.config.mts`: Contains proxy configuration for the development server
 - `src/backend/langflow/main.py`: Backend server configuration
 
 ## Impact
-This issue prevents the frontend from communicating with the backend, rendering the application non-functional. Users cannot create or manage flows, and the AI Assistant feature cannot function properly.
+This issue partially affects the frontend's ability to communicate with the backend. Basic functionality works, but some features may be affected.
 
 ## Priority
-High - This is a critical issue that prevents the application from functioning.
+Medium - The application is partially functional, but some features may not work correctly.
 
 ## Notes
-The issue appears to be related to networking configuration rather than code issues. The backend may be running correctly but not accessible from the frontend due to network configuration issues.
+The issue appears to be related to specific networking configuration rather than a complete failure. The backend is running correctly and is accessible, but certain connections from the frontend may still fail.

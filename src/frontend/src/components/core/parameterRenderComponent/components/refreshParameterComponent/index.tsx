@@ -52,42 +52,45 @@ export function RefreshParameterComponent({
 
   // Create a wrapper div to avoid nesting buttons when the child is itself a button
   // Enhanced detection to check all possible button-like components
-  const childIsButton = React.Children.toArray(children).some(
-    (child) => {
-      if (!React.isValidElement(child)) return false;
-      
-      // Check for Button component by displayName or name
-      if ((child.type as any)?.displayName === 'Button' || 
-          (child.type as any)?.name === 'Button' ||
-          (child.type as any) === Button) return true;
-      
-      // Check for button HTML type
-      if (child.props?.type === 'button') return true;
-      
-      // Check for button element
-      if ((child.type as any) === 'button') return true;
-      
-      // Check component name contains "button" (case insensitive)
-      const componentName = ((child.type as any)?.displayName || (child.type as any)?.name || '').toLowerCase();
-      if (componentName.includes('button')) return true;
-      
-      // Check if any children are buttons (checking one level deep)
-      if (child.props?.children) {
-        const childChildren = React.Children.toArray(child.props.children);
-        return childChildren.some(
-          (grandChild) => 
-            React.isValidElement(grandChild) && 
-            ((grandChild.type as any)?.displayName === 'Button' || 
-             (grandChild.type as any)?.name === 'Button' ||
-             (grandChild.type as any) === Button ||
-             (grandChild.props?.type === 'button') ||
-             (grandChild.type as any) === 'button' ||
-             ((grandChild.type as any)?.displayName || (grandChild.type as any)?.name || '').toLowerCase().includes('button'))
-        );
-      }
-      
-      return false;
+  const isButtonType = (type: any): boolean => {
+    if (!type) return false;
+
+    // Check if it's the Button component
+    if (type === Button) return true;
+
+    // Check displayName or name
+    const displayName = type.displayName || type.name || '';
+    if (displayName === 'Button') return true;
+
+    // Check if name contains 'button' (case insensitive)
+    if (displayName.toLowerCase().includes('button')) return true;
+
+    // Check if it's an HTML button element
+    if (type === 'button') return true;
+
+    return false;
+  };
+
+  const checkIfContainsButton = (element: React.ReactNode): boolean => {
+    if (!React.isValidElement(element)) return false;
+
+    // Check if the element itself is a button
+    if (isButtonType(element.type)) return true;
+
+    // Check if it has a type="button" prop
+    if (element.props?.type === 'button') return true;
+
+    // Check if any of its children are buttons
+    if (element.props?.children) {
+      const children = React.Children.toArray(element.props.children);
+      return children.some(child => checkIfContainsButton(child));
     }
+
+    return false;
+  };
+
+  const childIsButton = React.Children.toArray(children).some(child =>
+    checkIfContainsButton(child)
   );
 
   return (

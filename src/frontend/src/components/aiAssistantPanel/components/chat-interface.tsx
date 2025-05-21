@@ -12,7 +12,7 @@ export default function ChatInterface() {
   const { toast } = useToast();
   const [inputValue, setInputValue] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  
+
   const {
     chatHistory,
     addChatMessage,
@@ -40,11 +40,11 @@ export default function ChatInterface() {
     }
   }, [chatHistory]);
 
-  const { mutate: processClarification, isLoading: isProcessing } = useProcessClarificationMutation({
+  const { mutate: processClarification, isPending: isProcessing } = useProcessClarificationMutation({
     onSuccess: (data) => {
       // Update the interpretation with the new data
       setInterpretation(data.updated_interpretation);
-      
+
       // If there are more clarification questions, add them to the chat
       if (
         data.updated_interpretation.clarification_needed &&
@@ -59,9 +59,9 @@ export default function ChatInterface() {
           instruction,
           llm_provider: llmProvider,
           llm_model: llmModel,
-        });
+        } as any);
       }
-      
+
       setIsLoading(false);
     },
     onError: (error) => {
@@ -72,21 +72,21 @@ export default function ChatInterface() {
       });
       setIsLoading(false);
     },
-  });
+  } as any);
 
-  const { mutate: buildFlow, isLoading: isBuilding } = useBuildFlowMutation({
+  const { mutate: buildFlow, isPending: isBuilding } = useBuildFlowMutation({
     onSuccess: (data) => {
       setFlowData(data.flow.nodes, data.flow.edges);
-      
+
       // Add success message to chat
       addChatMessage(
         "assistant",
         "I've built a flow based on your instructions. You can view it in the Preview tab."
       );
-      
+
       // Clear clarification questions
       setClarificationQuestions([]);
-      
+
       // Switch to preview tab
       setActiveTab("preview");
       setIsLoading(false);
@@ -99,37 +99,53 @@ export default function ChatInterface() {
       });
       setIsLoading(false);
     },
-  });
+  } as any);
 
   const handleSubmit = () => {
     if (!inputValue.trim() || isProcessing || isBuilding) return;
-    
+
     // Add user message to chat
     addChatMessage("user", inputValue);
-    
+
     // If there are clarification questions, process the response
     if (clarificationQuestions.length > 0) {
       const questionId = clarificationQuestions[0].question_id;
-      
+
       setIsLoading(true);
       addClarificationResponse(questionId, inputValue);
-      
+
       processClarification({
         question_id: questionId,
         response: inputValue,
-      });
+        instruction: instruction, // Add the required instruction field
+      } as any);
+    } else if (interpretation) {
+      // If there's an interpretation but no clarification questions,
+      // add a helpful assistant message
+      addChatMessage(
+        "assistant",
+        "Your flow has been built based on your instructions. You can view it in the Preview tab."
+      );
+    } else {
+      // If there's no instruction or interpretation yet, guide the user
+      addChatMessage(
+        "assistant",
+        "Please enter your instruction in the Instruction tab first to create a flow."
+      );
+      setActiveTab("instruction");
     }
-    
+
     // Clear input
     setInputValue("");
   };
 
   return (
     <div className="flex h-full flex-col">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="flex flex-col gap-4">
+      {/* Set a fixed height for the scroll area with flex-grow to take remaining space */}
+      <ScrollArea ref={scrollAreaRef} className="flex-grow p-4" style={{ minHeight: 0 }}>
+        <div className="flex flex-col gap-4 pb-2">
           {chatHistory.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
               <IconComponent name="MessageSquare" className="mb-2 h-12 w-12" />
               <p>No messages yet</p>
               <p className="text-sm">Start by entering an instruction in the Instruction tab</p>
@@ -152,7 +168,7 @@ export default function ChatInterface() {
               </div>
             ))
           )}
-          
+
           {(isProcessing || isBuilding) && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <IconComponent name="Loader2" className="h-4 w-4 animate-spin" />
@@ -161,8 +177,9 @@ export default function ChatInterface() {
           )}
         </div>
       </ScrollArea>
-      
-      <div className="border-t border-border p-4">
+
+      {/* Set the input area to be fixed at the bottom with flex-shrink-0 */}
+      <div className="border-t border-border p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Input
             placeholder="Type your response..."
@@ -174,20 +191,23 @@ export default function ChatInterface() {
                 handleSubmit();
               }
             }}
-            disabled={isProcessing || isBuilding || clarificationQuestions.length === 0}
+            disabled={isProcessing || isBuilding}
           />
           <Button
             size="icon"
             onClick={handleSubmit}
-            disabled={!inputValue.trim() || isProcessing || isBuilding || clarificationQuestions.length === 0}
+            disabled={!inputValue.trim() || isProcessing || isBuilding}
           >
             <IconComponent name="Send" className="h-4 w-4" />
           </Button>
         </div>
-        
-        {clarificationQuestions.length === 0 && interpretation && !interpretation.clarification_needed && (
+
+        {/* Show information about the flow if available */}
+        {interpretation && !interpretation.clarification_needed && (
           <div className="mt-2 text-xs text-muted-foreground">
-            No clarification needed. Check the Preview tab to see your flow.
+            {clarificationQuestions.length === 0
+              ? "No clarification needed. Check the Preview tab to see your flow."
+              : "Answering clarification questions will help refine your flow."}
           </div>
         )}
       </div>
