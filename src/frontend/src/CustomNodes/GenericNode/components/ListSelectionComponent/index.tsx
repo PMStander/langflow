@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
-import { DialogHeader } from "@/components/ui/dialog";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { testIdCase } from "@/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -168,14 +168,14 @@ const ListSelectionComponent = ({
         onKeyDown={handleKeyDown}
       >
         <DialogHeader className="flex w-full justify-between border-b px-3 py-3">
+          <DialogTitle className="text-[13px] font-semibold">
+            {nodeClass?.display_name}
+          </DialogTitle>
           <div className="flex items-center gap-2">
             <ForwardedIconComponent
               name={nodeClass?.icon || "unknown"}
               className="h-[18px] w-[18px] text-muted-foreground"
             />
-            <div className="text-[13px] font-semibold">
-              {nodeClass?.display_name}
-            </div>
           </div>
         </DialogHeader>
         {(filteredList?.length > 20 || search) && (

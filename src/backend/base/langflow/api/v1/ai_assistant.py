@@ -404,29 +404,31 @@ async def get_api_keys(
         A dictionary with a list of API key names.
     """
     try:
-        from langflow.services.deps import get_variable_service, get_session
+        from langflow.services.deps import get_variable_service, get_db_service
         from langflow.services.variable.constants import CREDENTIAL_TYPE
 
-        # Get the variable service and session
+        # Get the variable service
         variable_service = get_variable_service()
-        session = get_session()
+        db_service = get_db_service()
 
-        # Get all variables for the user
-        variables = await variable_service.list_variables_by_type(
-            user_id=current_user.id,
-            type_=CREDENTIAL_TYPE,
-            session=session
-        )
+        # Use the with_session context manager
+        async with db_service.with_session() as session:
+            # Get all variables for the user
+            variables = await variable_service.list_variables_by_type(
+                user_id=current_user.id,
+                type_=CREDENTIAL_TYPE,
+                session=session
+            )
 
-        # Filter for API keys (variables that match common API key patterns)
-        api_key_names = []
-        for variable in variables:
-            if variable.name.endswith("_API_KEY") or variable.name.endswith("_KEY"):
-                api_key_names.append(variable.name)
+            # Filter for API keys (variables that match common API key patterns)
+            api_key_names = []
+            for variable in variables:
+                if variable.name.endswith("_API_KEY") or variable.name.endswith("_KEY"):
+                    api_key_names.append(variable.name)
 
-        return {
-            "api_keys": api_key_names
-        }
+            return {
+                "api_keys": api_key_names
+            }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

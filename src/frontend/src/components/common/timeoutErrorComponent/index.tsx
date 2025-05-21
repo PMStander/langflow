@@ -18,6 +18,9 @@ export default function TimeoutErrorComponent({
           setRetry();
         }}
       >
+        <BaseModal.Header description="Connection issue">
+          Server Response Timeout
+        </BaseModal.Header>
         <BaseModal.Content>
           <div role="status" className="m-auto flex flex-col items-center">
             <Loading className={`h-16 w-16`} />

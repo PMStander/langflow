@@ -372,7 +372,27 @@ class ComponentKnowledgeBase:
         result = []
 
         # Import here to avoid circular imports
-        from langflow.interface.component_list import ComponentList
+        try:
+            from langflow.interface.component_list import ComponentList
+        except ImportError:
+            # Fallback to a simple implementation if the module is not found
+            from langflow.interface.components import get_all_components
+
+            class ComponentList:
+                """A simple fallback implementation of ComponentList."""
+
+                def __init__(self):
+                    self.components = {}
+                    self.initialized = False
+
+                def get_all_components(self):
+                    """Get all components."""
+                    if not self.initialized:
+                        from langflow.services.deps import get_settings_service
+                        settings_service = get_settings_service()
+                        self.components = get_all_components(settings_service.settings.components_path, as_dict=True)
+                        self.initialized = True
+                    return list(self.components.values())
 
         # Get the component list
         component_list = ComponentList()

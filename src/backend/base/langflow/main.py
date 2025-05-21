@@ -24,6 +24,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.services.database.pagination_patch import patch_sqlalchemy_pagination
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -210,6 +211,9 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+    # Apply SQLAlchemy pagination patch to fix deprecation warnings
+    patch_sqlalchemy_pagination()
+
     app = FastAPI(
         title="Langflow",
         version=__version__,

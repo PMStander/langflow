@@ -19,6 +19,9 @@ export default function FetchErrorComponent({
           setRetry();
         }}
       >
+        <BaseModal.Header description="Connection issue">
+          Server Connection Error
+        </BaseModal.Header>
         <BaseModal.Content>
           <div role="status" className="m-auto flex flex-col items-center">
             <IconComponent
