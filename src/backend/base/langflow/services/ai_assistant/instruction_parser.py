@@ -260,79 +260,86 @@ class InstructionParser:
 
         # Initialize api_key to None at the beginning
         api_key = None
+        env_api_key = None
+        db_api_key = None
 
-        # First try to get the API key from environment variables
-        api_key = os.environ.get(key_name)
-        if api_key:
+        # Get the API key from environment variables
+        env_api_key = os.environ.get(key_name)
+        if env_api_key:
             logger.info(f"Found {key_name} in environment variables")
+            # Store it but don't use it yet - we'll prioritize the database value
+            api_key = env_api_key
 
-        # If not found in environment variables, try to get it from the variable service
-        if not api_key:
-            try:
-                # Get the variable service
-                from langflow.services.deps import get_variable_service, get_session, get_db_service
+        # Try to get the API key from the variable service
+        try:
+            # Get the variable service
+            from langflow.services.deps import get_variable_service, get_session, get_db_service
 
-                # Get the database service and open a session
-                db_service = get_db_service()
+            # Get the database service and open a session
+            db_service = get_db_service()
 
-                async with db_service.with_session() as session:
-                    # Get the current user directly from the database
-                    from sqlmodel import select
-                    from langflow.services.database.models.user.model import User
-                    from langflow.services.settings.service import SettingsService
-                    from langflow.services.deps import get_settings_service
+            async with db_service.with_session() as session:
+                # Get the current user directly from the database
+                from sqlmodel import select
+                from langflow.services.database.models.user.model import User
+                from langflow.services.settings.service import SettingsService
+                from langflow.services.deps import get_settings_service
 
-                    # Get settings to check if AUTO_LOGIN is enabled
-                    settings_service = get_settings_service()
+                # Get settings to check if AUTO_LOGIN is enabled
+                settings_service = get_settings_service()
 
-                    # If AUTO_LOGIN is enabled, get the superuser
-                    if settings_service.auth_settings.AUTO_LOGIN:
-                        from langflow.services.database.models.user.crud import get_user_by_username
+                # If AUTO_LOGIN is enabled, get the superuser
+                if settings_service.auth_settings.AUTO_LOGIN:
+                    from langflow.services.database.models.user.crud import get_user_by_username
 
-                        if settings_service.auth_settings.SUPERUSER:
-                            user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
-                            if user:
-                                logger.info(f"Using AUTO_LOGIN superuser: {user.id}")
-                            else:
-                                logger.warning(f"AUTO_LOGIN enabled but superuser not found")
-                    else:
-                        # Try to get the first user as a fallback
-                        stmt = select(User).limit(1)
-                        user = (await session.exec(stmt)).first()
+                    if settings_service.auth_settings.SUPERUSER:
+                        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
                         if user:
-                            logger.info(f"Using first available user: {user.id}")
+                            logger.info(f"Using AUTO_LOGIN superuser: {user.id}")
                         else:
-                            logger.warning("No users found in database")
-
+                            logger.warning(f"AUTO_LOGIN enabled but superuser not found")
+                else:
+                    # Try to get the first user as a fallback
+                    stmt = select(User).limit(1)
+                    user = (await session.exec(stmt)).first()
                     if user:
-                        # Get the variable service
-                        variable_service = get_variable_service()
+                        logger.info(f"Using first available user: {user.id}")
+                    else:
+                        logger.warning("No users found in database")
 
-                        # List all variables for debugging
-                        try:
-                            from langflow.services.database.models.variable import Variable
+                if user:
+                    # Get the variable service
+                    variable_service = get_variable_service()
 
-                            # Get all variables for this user
-                            stmt = select(Variable).where(Variable.user_id == user.id)
-                            all_vars = list((await session.exec(stmt)).all())
-                            logger.debug(f"User has {len(all_vars)} variables: {[(v.name, v.type) for v in all_vars]}")
-                        except Exception as e:
-                            logger.warning(f"Error listing variables: {str(e)}")
+                    # List all variables for debugging
+                    try:
+                        from langflow.services.database.models.variable import Variable
 
-                        # Try to get the API key from the variable service
-                        try:
-                            api_key = await variable_service.get_variable(
-                                user_id=user.id,
-                                name=key_name,
-                                field=key_name.lower(),
-                                session=session
-                            )
-                            logger.info(f"Successfully retrieved {key_name} from variable service")
-                            logger.debug(f"Value retrieved from variable service for {key_name}: {api_key}") # Add this debug log
-                        except Exception as e:
-                            logger.warning(f"Error getting {key_name} from variable service: {str(e)}")
-            except Exception as e:
-                logger.warning(f"Error accessing variable service: {str(e)}")
+                        # Get all variables for this user
+                        stmt = select(Variable).where(Variable.user_id == user.id)
+                        all_vars = list((await session.exec(stmt)).all())
+                        logger.debug(f"User has {len(all_vars)} variables: {[(v.name, v.type) for v in all_vars]}")
+                    except Exception as e:
+                        logger.warning(f"Error listing variables: {str(e)}")
+
+                    # Try to get the API key from the variable service
+                    try:
+                        db_api_key = await variable_service.get_variable(
+                            user_id=user.id,
+                            name=key_name,
+                            field=key_name.lower(),
+                            session=session
+                        )
+                        logger.info(f"Successfully retrieved {key_name} from variable service")
+                        logger.debug(f"Value retrieved from variable service for {key_name}: {db_api_key}")
+
+                        # Prioritize the database value over the environment variable
+                        if db_api_key and db_api_key != "dummy":
+                            api_key = db_api_key
+                    except Exception as e:
+                        logger.warning(f"Error getting {key_name} from variable service: {str(e)}")
+        except Exception as e:
+            logger.warning(f"Error accessing variable service: {str(e)}")
 
         # Check if the API key is missing or set to "dummy"
         if not api_key:
