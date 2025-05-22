@@ -153,6 +153,17 @@ def get_lifespan(*, fix_migration=False, version=None):
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Always refresh AI Assistant knowledge base to ensure all components are available
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Refreshing AI Assistant knowledge base to include all components")
+            from langflow.services.deps import get_ai_assistant_service
+            ai_assistant_service = get_ai_assistant_service()
+            await ai_assistant_service.refresh_knowledge_base()
+            logger.debug(f"AI Assistant knowledge base refreshed in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Log available component paths for debugging
+            logger.debug(f"Component paths: {get_settings_service().settings.components_path}")
+
             current_time = asyncio.get_event_loop().time()
             logger.debug("Creating/updating starter projects")
             await create_or_update_starter_projects(all_types_dict)

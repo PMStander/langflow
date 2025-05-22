@@ -9,7 +9,7 @@ import { useToast } from "../../../components/ui/use-toast";
 export default function InstructionInput() {
   const { toast } = useToast();
   const [inputValue, setInputValue] = useState("");
-  
+
   const {
     setInstruction,
     setIsLoading,
@@ -25,10 +25,10 @@ export default function InstructionInput() {
   const { mutate: interpretInstruction, isLoading: isInterpreting } = useInterpretInstructionMutation({
     onSuccess: (data) => {
       setInterpretation(data);
-      
+
       // Add the instruction to chat history
       addChatMessage("user", inputValue);
-      
+
       // If clarification is needed, add assistant message and switch to chat tab
       if (data.clarification_needed && data.clarification_questions.length > 0) {
         const question = data.clarification_questions[0].question;
@@ -57,13 +57,13 @@ export default function InstructionInput() {
   const { mutate: buildFlow, isLoading: isBuilding } = useBuildFlowMutation({
     onSuccess: (data) => {
       setFlowData(data.flow.nodes, data.flow.edges);
-      
+
       // Add success message to chat
       addChatMessage(
         "assistant",
         "I've built a flow based on your instructions. You can view it in the Preview tab."
       );
-      
+
       // Switch to preview tab
       setActiveTab("preview");
       setIsLoading(false);
@@ -80,10 +80,10 @@ export default function InstructionInput() {
 
   const handleSubmit = () => {
     if (!inputValue.trim()) return;
-    
+
     setIsLoading(true);
     setInstruction(inputValue);
-    
+
     // Interpret the instruction
     interpretInstruction({
       instruction: inputValue,
@@ -94,17 +94,23 @@ export default function InstructionInput() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         <Textarea
           placeholder="Describe the flow you want to build..."
-          className="h-full min-h-[300px] resize-none"
+          className="flex-1 resize-none"
+          style={{ minHeight: "calc(100% - 80px)" }}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           disabled={isInterpreting || isBuilding}
         />
+
+        <div className="mt-2 text-xs text-muted-foreground">
+          <p>Example: "Create a simple chatbot using OpenAI and a prompt template"</p>
+          <p>Example: "Build a document QA system with vector storage and retrieval"</p>
+        </div>
       </div>
-      
-      <div className="flex items-center justify-between">
+
+      <div className="flex items-center justify-between mt-auto">
         <div className="text-sm text-muted-foreground">
           {isInterpreting || isBuilding ? (
             <span className="flex items-center gap-2">
@@ -115,7 +121,7 @@ export default function InstructionInput() {
             "Enter a natural language instruction"
           )}
         </div>
-        
+
         <Button
           onClick={handleSubmit}
           disabled={!inputValue.trim() || isInterpreting || isBuilding}
@@ -123,11 +129,6 @@ export default function InstructionInput() {
           <IconComponent name="Wand2" className="mr-2 h-4 w-4" />
           Build Flow
         </Button>
-      </div>
-      
-      <div className="text-xs text-muted-foreground">
-        <p>Example: "Create a simple chatbot using OpenAI and a prompt template"</p>
-        <p>Example: "Build a document QA system with vector storage and retrieval"</p>
       </div>
     </div>
   );

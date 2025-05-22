@@ -57,14 +57,80 @@ class ComponentKnowledgeBase:
         logger.info("Building component knowledge base from registry")
 
         # Import here to avoid circular imports
-        from langflow.interface.components import get_and_cache_all_types_dict
+        from langflow.interface.components import get_and_cache_all_types_dict, aget_all_types_dict, component_cache
+
+        # Log component paths for debugging
+        logger.info(f"Component paths: {settings_service.settings.components_path}")
+
+        # Clear component cache to ensure fresh data
+        component_cache.all_types_dict = None
+        component_cache.fully_loaded_components = {}
 
         # Get all component types
         all_types_dict = await get_and_cache_all_types_dict(settings_service)
 
-        if not all_types_dict or "components" not in all_types_dict:
-            logger.warning("No components found in registry")
-            return
+        if not all_types_dict or "components" not in all_types_dict or not all_types_dict["components"]:
+            logger.warning("No components found in registry, attempting to load components directly")
+            # Try to load components directly
+            all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
+
+            if not all_types_dict or "components" not in all_types_dict or not all_types_dict["components"]:
+                logger.warning("Still no components found, using fallback standard components")
+                # Create fallback standard components
+                all_types_dict = self._create_fallback_components()
+
+        # Check for firecrawl components specifically
+        firecrawl_found = False
+        if "components" in all_types_dict:
+            for component_type, components in all_types_dict["components"].items():
+                firecrawl_components = [name for name in components.keys() if "firecrawl" in name.lower()]
+                if firecrawl_components:
+                    logger.info(f"Found firecrawl components in {component_type}: {firecrawl_components}")
+                    firecrawl_found = True
+
+        if not firecrawl_found:
+            logger.warning("No firecrawl components found in the registry")
+
+            # Try to manually add firecrawl components to the tools category
+            try:
+                # Check if firecrawl components exist in the codebase
+                from importlib import import_module
+                try:
+                    firecrawl_module = import_module("langflow.components.firecrawl")
+                    logger.info("Firecrawl module exists but wasn't loaded properly")
+
+                    # Ensure tools category exists
+                    if "tools" not in all_types_dict["components"]:
+                        all_types_dict["components"]["tools"] = {}
+
+                    # Add firecrawl components manually
+                    for component_name in ["FirecrawlScrapeApi", "FirecrawlCrawlApi", "FirecrawlMapApi", "FirecrawlExtractApi"]:
+                        try:
+                            component_class = getattr(firecrawl_module, component_name)
+                            logger.info(f"Adding {component_name} manually to tools category")
+
+                            # Create basic component entry
+                            all_types_dict["components"]["tools"][component_name.lower()] = {
+                                "display_name": component_name,
+                                "name": component_name.lower(),
+                                "type": "tools",
+                                "description": "Firecrawl API component for web scraping and data extraction",
+                                "template": {
+                                    "_type": "tools",
+                                    "inputs": {},
+                                    "outputs": {},
+                                    "output_types": ["tools"],
+                                    "documentation": "https://docs.firecrawl.dev/",
+                                    "display_name": component_name,
+                                    "base_classes": ["tools"],
+                                },
+                            }
+                        except (AttributeError, ImportError) as e:
+                            logger.warning(f"Could not add {component_name} manually: {e}")
+                except ImportError:
+                    logger.warning("Firecrawl module not found in the codebase")
+            except Exception as e:
+                logger.warning(f"Error trying to manually add firecrawl components: {e}")
 
         # Store components
         self.components = all_types_dict["components"]
@@ -359,6 +425,106 @@ class ComponentKnowledgeBase:
                 compatible_components.append(component_info)
 
         return compatible_components
+
+    def _create_fallback_components(self) -> Dict[str, Any]:
+        """Create fallback standard components when the registry is empty.
+
+        Returns:
+            A dictionary containing standard component definitions.
+        """
+        # Create a basic component structure with essential components
+        components_dict = {"components": {}}
+
+        # Define standard component types
+        component_types = [
+            "llms", "prompts", "chains", "agents", "tools",
+            "memories", "embeddings", "vectorstores", "retrievers",
+            "documentloaders", "textsplitters", "outputparsers"
+        ]
+
+        # Create basic components for each type
+        for component_type in component_types:
+            components_dict["components"][component_type] = {}
+
+            # Add standard components based on type
+            if component_type == "llms":
+                components_dict["components"][component_type]["openai"] = self._create_basic_component(
+                    "openai", component_type, "OpenAI", "OpenAI large language model"
+                )
+            elif component_type == "prompts":
+                components_dict["components"][component_type]["prompt"] = self._create_basic_component(
+                    "prompt", component_type, "Prompt", "Text prompt for language models"
+                )
+            elif component_type == "chains":
+                components_dict["components"][component_type]["llm_chain"] = self._create_basic_component(
+                    "llm_chain", component_type, "LLM Chain", "Chain for language model processing"
+                )
+            elif component_type == "agents":
+                components_dict["components"][component_type]["agent"] = self._create_basic_component(
+                    "agent", component_type, "Agent", "Autonomous agent for task execution"
+                )
+            elif component_type == "tools":
+                components_dict["components"][component_type]["search"] = self._create_basic_component(
+                    "search", component_type, "Search Tool", "Tool for searching information"
+                )
+            elif component_type == "memories":
+                components_dict["components"][component_type]["buffer_memory"] = self._create_basic_component(
+                    "buffer_memory", component_type, "Buffer Memory", "Memory for storing conversation history"
+                )
+            elif component_type == "embeddings":
+                components_dict["components"][component_type]["openai_embeddings"] = self._create_basic_component(
+                    "openai_embeddings", component_type, "OpenAI Embeddings", "Text embeddings from OpenAI"
+                )
+            elif component_type == "vectorstores":
+                components_dict["components"][component_type]["chroma"] = self._create_basic_component(
+                    "chroma", component_type, "Chroma", "Vector database for storing embeddings"
+                )
+            elif component_type == "retrievers":
+                components_dict["components"][component_type]["vectorstore_retriever"] = self._create_basic_component(
+                    "vectorstore_retriever", component_type, "Vectorstore Retriever", "Retriever for vector databases"
+                )
+            elif component_type == "documentloaders":
+                components_dict["components"][component_type]["text_loader"] = self._create_basic_component(
+                    "text_loader", component_type, "Text Loader", "Loader for text documents"
+                )
+            elif component_type == "textsplitters":
+                components_dict["components"][component_type]["character_splitter"] = self._create_basic_component(
+                    "character_splitter", component_type, "Character Text Splitter", "Splits text by character count"
+                )
+            elif component_type == "outputparsers":
+                components_dict["components"][component_type]["structured_parser"] = self._create_basic_component(
+                    "structured_parser", component_type, "Structured Output Parser", "Parser for structured outputs"
+                )
+
+        return components_dict
+
+    def _create_basic_component(self, name: str, component_type: str, display_name: str, description: str) -> Dict[str, Any]:
+        """Create a basic component definition.
+
+        Args:
+            name: The component name.
+            component_type: The component type.
+            display_name: The display name for the component.
+            description: The component description.
+
+        Returns:
+            A dictionary containing the component definition.
+        """
+        return {
+            "display_name": display_name,
+            "name": name,
+            "type": component_type,
+            "description": description,
+            "template": {
+                "_type": component_type,
+                "inputs": {},
+                "outputs": {},
+                "output_types": [component_type],
+                "documentation": description,
+                "display_name": display_name,
+                "base_classes": [component_type],
+            },
+        }
 
     def get_components_by_type(self, component_type: str) -> List[Any]:
         """Get all components of a specific type.

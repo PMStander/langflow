@@ -298,3 +298,33 @@ export const useGetAPIKeysQuery: useQueryFunctionType<
 
   return queryResult;
 };
+
+// Mutation to refresh the AI Assistant's knowledge base
+export const useRefreshKnowledgeBaseMutation: useMutationFunctionType<
+  undefined,
+  { message: string; status: string }
+> = (options) => {
+  const { mutate } = UseRequestProcessor();
+
+  const refreshKnowledgeBaseFn = async () => {
+    const response = await api.post<{ message: string; status: string }>(
+      `${getURL("AI_ASSISTANT")}/refresh-knowledge-base`
+    );
+    return response.data;
+  };
+
+  const mutationResult = mutate(
+    ["useRefreshKnowledgeBaseMutation"],
+    refreshKnowledgeBaseFn,
+    {
+      ...options,
+    }
+  );
+
+  return mutationResult as UseMutationResult<
+    { message: string; status: string },
+    Error,
+    undefined,
+    unknown
+  >;
+};

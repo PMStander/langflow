@@ -67,7 +67,7 @@ export default function AIAssistantPanel() {
   }
 
   return (
-    <div className="fixed bottom-0 right-0 z-50 flex h-[600px] w-[400px] flex-col rounded-tl-lg border border-border bg-background shadow-xl overflow-hidden">
+    <div className="fixed bottom-0 right-0 z-50 flex h-[700px] w-[800px] flex-col rounded-tl-lg border border-border bg-background shadow-xl overflow-hidden">
       <div className="flex items-center justify-between border-b border-border p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <IconComponent name="Bot" className="h-5 w-5 text-primary" />
@@ -88,16 +88,37 @@ export default function AIAssistantPanel() {
       </div>
 
       <div className="flex flex-col p-4 space-y-4 flex-shrink-0">
-        <LLMProviderSelector
-          providers={llmProviders || {}}
-          selectedProvider={llmProvider}
-          selectedModel={llmModel}
-          onProviderChange={setLLMProvider}
-          onModelChange={setLLMModel}
-          isLoading={isLoadingProviders}
-        />
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Settings</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => {
+              const settingsSection = document.getElementById('ai-assistant-settings');
+              if (settingsSection) {
+                settingsSection.classList.toggle('hidden');
+              }
+            }}
+          >
+            <IconComponent name="ChevronDown" className="h-4 w-4" />
+          </Button>
+        </div>
 
-        <APIKeyManager />
+        <div id="ai-assistant-settings">
+          <LLMProviderSelector
+            providers={llmProviders || {}}
+            selectedProvider={llmProvider}
+            selectedModel={llmModel}
+            onProviderChange={setLLMProvider}
+            onModelChange={setLLMModel}
+            isLoading={isLoadingProviders}
+          />
+
+          <div className="mt-3">
+            <APIKeyManager />
+          </div>
+        </div>
       </div>
 
       <Separator />

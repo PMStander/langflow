@@ -19,11 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import { useGetAPIKeysQuery, useSaveAPIKeyMutation } from "../../../controllers/API/queries/ai-assistant";
+import {
+  useGetAPIKeysQuery,
+  useSaveAPIKeyMutation,
+  useRefreshKnowledgeBaseMutation
+} from "../../../controllers/API/queries/ai-assistant";
 import { Separator } from "../../../components/ui/separator";
-import { KeyIcon, PlusIcon } from "lucide-react";
+import { KeyIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
+import ShadTooltip from "../../../components/common/shadTooltipComponent";
 
-// Common API key names for LLM providers
+// Common API key names for LLM providers and other services
 const COMMON_API_KEYS = [
   "OPENAI_API_KEY",
   "ANTHROPIC_API_KEY",
@@ -32,6 +37,7 @@ const COMMON_API_KEYS = [
   "GROQ_API_KEY",
   "HUGGINGFACEHUB_API_TOKEN",
   "AZURE_OPENAI_API_KEY",
+  "FIRECRAWL_API_KEY",
 ];
 
 export default function APIKeyManager() {
@@ -59,6 +65,23 @@ export default function APIKeyManager() {
     onError: (error) => {
       toast({
         title: "Error Saving API Key",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  } as any);
+
+  // Refresh knowledge base mutation
+  const { mutate: refreshKnowledgeBase, isPending: isRefreshing } = useRefreshKnowledgeBaseMutation({
+    onSuccess: (data) => {
+      toast({
+        title: "Knowledge Base Refreshed",
+        description: data.message,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error Refreshing Knowledge Base",
         description: error.message,
         variant: "destructive",
       });
@@ -99,13 +122,24 @@ export default function APIKeyManager() {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">API Keys</Label>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add Key
+        <div className="flex gap-2">
+          <ShadTooltip content="Refresh component registry (fixes missing components)" side="left">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshKnowledgeBase(undefined)}
+              disabled={isRefreshing}
+            >
+              <RefreshCwIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
-          </DialogTrigger>
+          </ShadTooltip>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add Key
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add API Key</DialogTitle>
@@ -193,6 +227,7 @@ export default function APIKeyManager() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="border rounded-md p-2 max-h-32 overflow-y-auto">

@@ -57,6 +57,13 @@ class AIAssistantService(Service):
             # Build the component knowledge base
             await self.knowledge_base.build_from_registry(self.settings_service)
 
+            # Check if components were loaded
+            if not self.knowledge_base.components:
+                logger.warning("No components were loaded in the knowledge base")
+                # We'll continue anyway since we've added fallback components
+            else:
+                logger.info(f"Successfully loaded {sum(len(comps) for comps in self.knowledge_base.components.values())} components")
+
             # Analyze component relationships
             await self.knowledge_base.analyze_connection_compatibility()
 
@@ -75,6 +82,8 @@ class AIAssistantService(Service):
             logger.info("AI Assistant Service initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing AI Assistant Service: {str(e)}")
+            # Log more details about the error
+            logger.exception("Detailed error information:")
             raise
 
     async def set_llm_provider(self, provider_name: str, model_name: str) -> None:
@@ -292,6 +301,76 @@ class AIAssistantService(Service):
             }
 
         return llm_providers
+
+    async def refresh_knowledge_base(self) -> None:
+        """Refresh the component knowledge base.
+
+        This method rebuilds the knowledge base from the component registry,
+        ensuring that all components (including those from bundles) are available.
+        """
+        logger.info("Refreshing AI Assistant knowledge base")
+        try:
+            # Import here to avoid circular imports
+            from langflow.interface.components import get_and_cache_all_types_dict, aget_all_types_dict
+
+            # Reset initialization flag to force rebuild
+            self.initialized = False
+            self.ready = False
+
+            # Clear the existing knowledge base
+            self.knowledge_base = ComponentKnowledgeBase()
+
+            # Force reload all components including bundles
+            # First clear the cache to ensure we get fresh data
+            from langflow.interface.components import component_cache
+            component_cache.all_types_dict = None
+            component_cache.fully_loaded_components = {}
+
+            # Get all component types with fresh data
+            all_types_dict = await get_and_cache_all_types_dict(self.settings_service)
+
+            # If still no components, try direct loading
+            if not all_types_dict or "components" not in all_types_dict or not all_types_dict["components"]:
+                logger.warning("No components found in registry after refresh, attempting direct load")
+                all_types_dict = await aget_all_types_dict(self.settings_service.settings.components_path)
+
+            # Log component count for debugging
+            if all_types_dict and "components" in all_types_dict:
+                component_count = sum(len(comps) for comps in all_types_dict["components"].values())
+                logger.info(f"Loaded {component_count} components during refresh")
+
+                # Log available component types
+                logger.info(f"Available component types: {list(all_types_dict['components'].keys())}")
+
+                # Check for firecrawl components specifically
+                for component_type, components in all_types_dict["components"].items():
+                    firecrawl_components = [name for name in components.keys() if "firecrawl" in name.lower()]
+                    if firecrawl_components:
+                        logger.info(f"Found firecrawl components in {component_type}: {firecrawl_components}")
+
+            # Rebuild the knowledge base
+            await self.knowledge_base.build_from_registry(self.settings_service)
+
+            # Analyze component relationships
+            await self.knowledge_base.analyze_connection_compatibility()
+
+            # Create semantic mappings
+            await self.knowledge_base.create_semantic_mappings()
+
+            # Initialize the instruction parser
+            self.instruction_parser = InstructionParser(self.knowledge_base, self.settings_service)
+            await self.instruction_parser.set_llm_provider(self.llm_provider, self.llm_model)
+
+            # Initialize the flow constructor
+            self.flow_constructor = FlowConstructor(self.knowledge_base)
+
+            self.initialized = True
+            self.ready = True
+            logger.info("AI Assistant knowledge base refreshed successfully")
+        except Exception as e:
+            logger.error(f"Error refreshing AI Assistant knowledge base: {str(e)}")
+            logger.exception("Detailed error information:")
+            raise
 
     async def teardown(self) -> None:
         """Clean up resources used by the AI Assistant Service."""

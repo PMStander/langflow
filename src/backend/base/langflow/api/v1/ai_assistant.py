@@ -411,6 +411,34 @@ async def save_api_key(
         )
 
 
+@router.post("/refresh-knowledge-base", dependencies=[Depends(get_current_active_user)])
+async def refresh_knowledge_base(
+    ai_assistant_service: AIAssistantService = Depends(get_ai_assistant_service)
+) -> Dict[str, str]:
+    """Refresh the AI Assistant's knowledge base.
+
+    This endpoint forces a refresh of the AI Assistant's knowledge base,
+    ensuring that all components (including those from bundles) are available.
+
+    Args:
+        ai_assistant_service: The AI Assistant Service.
+
+    Returns:
+        A confirmation message.
+    """
+    try:
+        await ai_assistant_service.refresh_knowledge_base()
+        return {
+            "message": "AI Assistant knowledge base refreshed successfully",
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error refreshing knowledge base: {str(e)}"
+        )
+
+
 @router.get("/api-keys", dependencies=[Depends(get_current_active_user)])
 async def get_api_keys(
     current_user = Depends(get_current_active_user)
