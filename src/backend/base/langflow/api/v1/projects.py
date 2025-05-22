@@ -157,8 +157,12 @@ async def read_project(
                 paginated_flows = await apaginate(session, stmt, params=params)
                 
                 # Convert Flow objects to FlowRead objects to ensure they're properly serialized
-                if hasattr(paginated_flows, 'items'):
+                if hasattr(paginated_flows, 'items') and isinstance(paginated_flows.items, list):
                     paginated_flows.items = [FlowRead.model_validate(flow, from_attributes=True) for flow in paginated_flows.items]
+                else:
+                    # If we get here, paginated_flows doesn't have the expected structure
+                    # Throw an exception to fall back to the unpaginated approach
+                    raise ValueError("Unexpected pagination result structure")
                 
                 return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
             except Exception as pagination_error:
@@ -167,8 +171,8 @@ async def read_project(
                 logging.error(f"Pagination error: {str(pagination_error)}")
                 
                 # Fall back to unpaginated results - fetch all flows without pagination
-                flows = await session.execute(stmt)
-                flows = flows.scalars().all()
+                flows = await session.exec(stmt)
+                flows = flows.all()
                 
                 # Convert Flow objects to FlowRead objects
                 flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
