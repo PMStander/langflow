@@ -7,6 +7,9 @@ Langflow is an open-source UI visual tool designed to facilitate the creation, e
 ## Product Context
 Langflow aims to democratize access to Large Language Model (LLM) application development by providing a visual, intuitive interface for building complex LangChain workflows.
 → [Product Context](core/productContext.md)
+→ [Basic Component](rules/components/basic_component.mdc) - Rules and checklist for creating a basic Langflow Component
+→ [Icons](rules/icons.mdc) - Rules and checklist for adding and using langflow component icons.
+
 
 ## System Architecture
 Langflow follows a client-server architecture with a React frontend and FastAPI backend, designed for extensibility and ease of use.
