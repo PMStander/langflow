@@ -18,6 +18,7 @@ import useAlertStore from "@/stores/alertStore";
 import useWorkspaceStore from "@/stores/workspaceStore";
 import { useEffect, useRef, useState } from "react";
 import FlowMenu from "./components/FlowMenu";
+import NavigationLinks from "./components/NavigationLinks";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -146,6 +147,12 @@ export default function AppHeader(): JSX.Element {
             <CustomProductSelector />
           </>
         )}
+        {/* Navigation Links */}
+        <NavigationLinks />
+        <Separator
+          orientation="vertical"
+          className="my-auto h-7 dark:border-zinc-700"
+        />
         <WorkspaceSelector
           onCreateWorkspace={() => setOpenCreateWorkspaceModal(true)}
           onManageWorkspaces={() => navigate("/workspaces")}
