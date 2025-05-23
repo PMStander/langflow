@@ -148,3 +148,12 @@ def initialize_session_service() -> None:
     service_manager.register_factory(cache_factory.CacheServiceFactory())
 
     service_manager.register_factory(session_service_factory.SessionServiceFactory())
+
+
+def initialize_supabase_auth_service() -> None:
+    """Initialize the Supabase Auth service."""
+    from langflow.services.supabase_auth import factory as supabase_auth_factory
+
+    initialize_settings_service()
+
+    service_manager.register_factory(supabase_auth_factory.SupabaseAuthServiceFactory())

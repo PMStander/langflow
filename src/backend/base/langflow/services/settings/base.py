@@ -159,6 +159,14 @@ class Settings(BaseSettings):
 
     storage_type: str = "local"
 
+    # Supabase
+    supabase_url: str | None = None
+    """The Supabase URL for authentication."""
+    supabase_key: str | None = None
+    """The Supabase API key for authentication."""
+    supabase_auth_enabled: bool = False
+    """Whether to enable Supabase Auth."""
+
     celery_enabled: bool = False
 
     fallback_to_env_var: bool = True

@@ -873,6 +873,13 @@ export const convertUTCToLocalTimezone = (timestamp: string) => {
   return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
 };
 
+export const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}/${day}/${year}`;
+};
+
 export const formatNumber = (num: number | undefined): string => {
   if (num === undefined) return "0";
 

@@ -5,6 +5,7 @@ export type FolderType = {
   description: string;
   id?: string | null;
   parent_id: string;
+  workspace_id?: string | null;
   flows: FlowType[];
   components: string[];
 };
@@ -15,6 +16,7 @@ export type PaginatedFolderType = {
     description: string;
     id?: string | null;
     parent_id: string;
+    workspace_id?: string | null;
     components: string[];
   };
   flows: {
@@ -31,6 +33,7 @@ export type AddFolderType = {
   description: string;
   id?: string | null;
   parent_id: string | null;
+  workspace_id?: string | null;
   flows?: string[];
   components?: string[];
 };

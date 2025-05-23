@@ -16,6 +16,8 @@ from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
+from langflow.api.v1.workspaces import router as workspaces_router
+from langflow.api.v1.workspace_members import router as workspace_members_router
 
 __all__ = [
     "ai_assistant_router",
@@ -36,4 +38,6 @@ __all__ = [
     "validate_router",
     "variables_router",
     "voice_mode_router",
+    "workspaces_router",
+    "workspace_members_router",
 ]

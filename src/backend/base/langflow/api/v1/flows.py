@@ -20,6 +20,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.utils.workspace import get_folder_workspace_id, verify_folder_access, verify_workspace_access
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -144,6 +145,32 @@ async def create_flow(
     current_user: CurrentActiveUser,
 ):
     try:
+        # Check folder permissions if folder_id is provided
+        if flow.folder_id:
+            # Get the folder's workspace_id
+            workspace_id = await get_folder_workspace_id(session, flow.folder_id)
+
+            # If folder has a workspace, verify access with editor permissions
+            if workspace_id:
+                await verify_workspace_access(
+                    session=session,
+                    workspace_id=workspace_id,
+                    user_id=current_user.id,
+                    required_role="editor"
+                )
+
+                # Set the workspace_id on the flow
+                flow.workspace_id = workspace_id
+
+        # If workspace_id is provided directly, verify access
+        elif flow.workspace_id:
+            await verify_workspace_access(
+                session=session,
+                workspace_id=flow.workspace_id,
+                user_id=current_user.id,
+                required_role="editor"
+            )
+
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
         await session.commit()
         await session.refresh(db_flow)
@@ -286,8 +313,25 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
+    # Get the flow
+    flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check workspace permissions if the flow has a workspace_id
+    if flow.workspace_id:
+        await verify_workspace_access(
+            session=session,
+            workspace_id=flow.workspace_id,
+            user_id=current_user.id,
+            required_role="viewer"  # Viewer role is sufficient for reading
+        )
+
+    # If flow doesn't have a workspace_id, use the original _read_flow function
     if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
         return user_flow
+
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
@@ -317,15 +361,40 @@ async def update_flow(
     """Update a flow."""
     settings_service = get_settings_service()
     try:
-        db_flow = await _read_flow(
-            session=session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-            settings_service=settings_service,
-        )
+        # Get the flow
+        db_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        # Check workspace permissions if the flow has a workspace_id
+        if db_flow.workspace_id:
+            await verify_workspace_access(
+                session=session,
+                workspace_id=db_flow.workspace_id,
+                user_id=current_user.id,
+                required_role="editor"  # Editor role is required for updating
+            )
+        else:
+            # If flow doesn't have a workspace_id, use the original _read_flow function
+            db_flow = await _read_flow(
+                session=session,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                settings_service=settings_service,
+            )
+
+            if not db_flow:
+                raise HTTPException(status_code=404, detail="Flow not found")
+
+        # If workspace_id is being updated, verify access to the new workspace
+        if flow.workspace_id and flow.workspace_id != db_flow.workspace_id:
+            await verify_workspace_access(
+                session=session,
+                workspace_id=flow.workspace_id,
+                user_id=current_user.id,
+                required_role="editor"
+            )
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
@@ -383,14 +452,31 @@ async def delete_flow(
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
-        settings_service=get_settings_service(),
-    )
+    # Get the flow directly to check workspace permissions
+    flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check workspace permissions if the flow has a workspace_id
+    if flow.workspace_id:
+        await verify_workspace_access(
+            session=session,
+            workspace_id=flow.workspace_id,
+            user_id=current_user.id,
+            required_role="editor"  # Editor role is required for deleting
+        )
+    else:
+        # If no workspace_id, use the original _read_flow function to check user permissions
+        flow = await _read_flow(
+            session=session,
+            flow_id=flow_id,
+            user_id=current_user.id,
+            settings_service=get_settings_service(),
+        )
+        if not flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
+
     await cascade_delete_flow(session, flow.id)
     await session.commit()
     return {"message": "Flow deleted successfully"}
@@ -405,11 +491,40 @@ async def create_flows(
 ):
     """Create multiple new flows."""
     db_flows = []
+
+    # Check workspace permissions for each flow
     for flow in flow_list.flows:
+        # Check folder permissions if folder_id is provided
+        if flow.folder_id:
+            # Get the folder's workspace_id
+            workspace_id = await get_folder_workspace_id(session, flow.folder_id)
+
+            # If folder has a workspace, verify access with editor permissions
+            if workspace_id:
+                await verify_workspace_access(
+                    session=session,
+                    workspace_id=workspace_id,
+                    user_id=current_user.id,
+                    required_role="editor"
+                )
+
+                # Set the workspace_id on the flow
+                flow.workspace_id = workspace_id
+
+        # If workspace_id is provided directly, verify access
+        elif flow.workspace_id:
+            await verify_workspace_access(
+                session=session,
+                workspace_id=flow.workspace_id,
+                user_id=current_user.id,
+                required_role="editor"
+            )
+
         flow.user_id = current_user.id
         db_flow = Flow.model_validate(flow, from_attributes=True)
         session.add(db_flow)
         db_flows.append(db_flow)
+
     await session.commit()
     for db_flow in db_flows:
         await session.refresh(db_flow)
@@ -423,8 +538,35 @@ async def upload_file(
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
+    workspace_id: UUID | None = None,
 ):
     """Upload flows from a file."""
+    # Check folder permissions if folder_id is provided
+    if folder_id:
+        # Get the folder's workspace_id
+        folder_workspace_id = await get_folder_workspace_id(session, folder_id)
+
+        # If folder has a workspace, verify access with editor permissions
+        if folder_workspace_id:
+            await verify_workspace_access(
+                session=session,
+                workspace_id=folder_workspace_id,
+                user_id=current_user.id,
+                required_role="editor"
+            )
+
+            # Set the workspace_id
+            workspace_id = folder_workspace_id
+
+    # If workspace_id is provided directly, verify access
+    elif workspace_id:
+        await verify_workspace_access(
+            session=session,
+            workspace_id=workspace_id,
+            user_id=current_user.id,
+            required_role="editor"
+        )
+
     contents = await file.read()
     data = orjson.loads(contents)
     response_list = []
@@ -434,6 +576,8 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
+        if workspace_id:
+            flow.workspace_id = workspace_id
         response = await _new_flow(session=session, flow=flow, user_id=current_user.id)
         response_list.append(response)
 
@@ -479,14 +623,37 @@ async def delete_multiple_flows(
 
     """
     try:
+        # Get all flows to delete
         flows_to_delete = (
-            await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
+            await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)))
         ).all()
+
+        # Check permissions for each flow
+        authorized_flows = []
         for flow in flows_to_delete:
+            try:
+                # Check workspace permissions if the flow has a workspace_id
+                if flow.workspace_id:
+                    await verify_workspace_access(
+                        session=db,
+                        workspace_id=flow.workspace_id,
+                        user_id=user.id,
+                        required_role="editor"  # Editor role is required for deleting
+                    )
+                    authorized_flows.append(flow)
+                # If no workspace_id, check if user owns the flow
+                elif flow.user_id == user.id:
+                    authorized_flows.append(flow)
+            except HTTPException:
+                # Skip flows that the user doesn't have permission to delete
+                continue
+
+        # Delete authorized flows
+        for flow in authorized_flows:
             await cascade_delete_flow(db, flow.id)
 
         await db.commit()
-        return {"deleted": len(flows_to_delete)}
+        return {"deleted": len(authorized_flows)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -498,12 +665,36 @@ async def download_multiple_file(
     db: DbSession,
 ):
     """Download all flows as a zip file."""
-    flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
+    # Get all flows to download
+    all_flows = (await db.exec(select(Flow).where(Flow.id.in_(flow_ids)))).all()  # type: ignore[attr-defined]
 
-    if not flows:
+    if not all_flows:
         raise HTTPException(status_code=404, detail="No flows found.")
 
-    flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
+    # Check permissions for each flow
+    authorized_flows = []
+    for flow in all_flows:
+        try:
+            # Check workspace permissions if the flow has a workspace_id
+            if flow.workspace_id:
+                await verify_workspace_access(
+                    session=db,
+                    workspace_id=flow.workspace_id,
+                    user_id=user.id,
+                    required_role="viewer"  # Viewer role is sufficient for downloading
+                )
+                authorized_flows.append(flow)
+            # If no workspace_id, check if user owns the flow
+            elif flow.user_id == user.id:
+                authorized_flows.append(flow)
+        except HTTPException:
+            # Skip flows that the user doesn't have permission to download
+            continue
+
+    if not authorized_flows:
+        raise HTTPException(status_code=404, detail="No flows found or you don't have permission to access them.")
+
+    flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in authorized_flows]
 
     if len(flows_without_api_keys) > 1:
         # Create a byte stream to hold the ZIP file

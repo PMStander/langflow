@@ -169,6 +169,18 @@ def initialize_session_service() -> None:
     )
 
 
+def initialize_supabase_auth_service() -> None:
+    """Initialize the Supabase Auth service."""
+    from langflow.services.supabase_auth import factory as supabase_auth_factory
+
+    initialize_settings_service()
+
+    get_service(
+        ServiceType.SUPABASE_AUTH_SERVICE,
+        supabase_auth_factory.SupabaseAuthServiceFactory(),
+    )
+
+
 async def clean_transactions(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old transactions from the database.
 
@@ -235,12 +247,18 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
 
+    # Initialize Supabase Auth service if enabled
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    if settings_service.settings.supabase_auth_enabled:
+        logger.debug("Initializing Supabase Auth service")
+        initialize_supabase_auth_service()
+        logger.debug("Supabase Auth service initialized")
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
     async with db_service.with_session() as session:
-        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()

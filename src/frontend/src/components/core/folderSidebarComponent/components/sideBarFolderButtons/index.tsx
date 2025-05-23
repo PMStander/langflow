@@ -36,6 +36,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
+import useWorkspaceStore from "@/stores/workspaceStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
@@ -98,8 +99,16 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
   );
 
+  const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+
+  // Refetch folders when workspace changes
+  useEffect(() => {
+    // This will trigger a refetch of folders when the workspace changes
+    // The query key in useGetFoldersQuery includes currentWorkspaceId
+  }, [currentWorkspaceId]);
+
   const isFetchingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
+    queryKey: ["useGetFolders", currentWorkspaceId],
     exact: false,
   });
 
@@ -195,6 +204,7 @@ const SideBarFoldersButtonsComponent = ({
           name: "New Project",
           parent_id: null,
           description: "",
+          workspace_id: currentWorkspaceId || undefined,
         },
       },
       {

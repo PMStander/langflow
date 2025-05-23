@@ -259,3 +259,14 @@ def get_ai_assistant_service() -> AIAssistantService:
     from langflow.services.ai_assistant.factory import AIAssistantServiceFactory
 
     return get_service(ServiceType.AI_ASSISTANT_SERVICE, AIAssistantServiceFactory())
+
+
+def get_supabase_auth_service():
+    """Retrieves the Supabase Auth Service instance from the service manager.
+
+    Returns:
+        SupabaseAuthService: The Supabase Auth Service instance.
+    """
+    from langflow.services.supabase_auth.factory import SupabaseAuthServiceFactory
+
+    return get_service(ServiceType.SUPABASE_AUTH_SERVICE, SupabaseAuthServiceFactory())

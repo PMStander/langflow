@@ -3,6 +3,7 @@ import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import WorkspaceSelector from "@/components/core/workspaceSelectorComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
@@ -12,7 +13,9 @@ import { CustomProductSelector } from "@/customization/components/custom-product
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import WorkspaceModal from "@/modals/workspaceModal";
 import useAlertStore from "@/stores/alertStore";
+import useWorkspaceStore from "@/stores/workspaceStore";
 import { useEffect, useRef, useState } from "react";
 import FlowMenu from "./components/FlowMenu";
 
@@ -22,6 +25,8 @@ export default function AppHeader(): JSX.Element {
   const [activeState, setActiveState] = useState<"notifications" | null>(null);
   const notificationRef = useRef<HTMLButtonElement | null>(null);
   const notificationContentRef = useRef<HTMLDivElement | null>(null);
+  const [openCreateWorkspaceModal, setOpenCreateWorkspaceModal] = useState(false);
+  const workspaceToEdit = useWorkspaceStore((state) => state.workspaceToEdit);
   useTheme();
 
   useEffect(() => {
@@ -59,6 +64,29 @@ export default function AppHeader(): JSX.Element {
         className={`z-30 flex items-center gap-2`}
         data-testid="header_left_section_wrapper"
       >
+        {ENABLE_DATASTAX_LANGFLOW ? (
+          <DataStaxLogo className="fill-black dark:fill-[white]" />
+        ) : (
+          <LangflowLogo className="h-6 w-6" />
+        )}
+      </div>
+      {ENABLE_DATASTAX_LANGFLOW && (
+        <>
+          <CustomOrgSelector />
+          <CustomProductSelector />
+        </>
+      )}
+
+      {/* Middle Section */}
+      <div className="absolute left-1/2 w-full flex-1 -translate-x-1/2">
+        <FlowMenu />
+      </div>
+
+      {/* Right Section */}
+      <div
+        className={`relative left-3 z-30 flex items-center gap-3`}
+        data-testid="header_right_section_wrapper"
+      >
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -71,32 +99,6 @@ export default function AppHeader(): JSX.Element {
             <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
-        {ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <CustomOrgSelector />
-            <CustomProductSelector />
-          </>
-        )}
-      </div>
-
-      {/* Middle Section */}
-      <div className="absolute left-1/2 w-full flex-1 -translate-x-1/2">
-        <FlowMenu />
-      </div>
-
-      {/* Right Section */}
-      <div
-        className={`relative left-3 z-30 flex items-center gap-3`}
-        data-testid="header_right_section_wrapper"
-      >
-        <>
-          <Button
-            unstyled
-            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
-          >
-            <CustomLangflowCounts />
-          </Button>
-        </>
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
@@ -106,45 +108,68 @@ export default function AppHeader(): JSX.Element {
             side="bottom"
             styleClasses="z-10"
           >
-            <AlertDropdown onClose={() => setActiveState(null)}>
-              <Button
-                ref={notificationRef}
-                unstyled
-                onClick={() =>
-                  setActiveState((prev) =>
-                    prev === "notifications" ? null : "notifications",
-                  )
-                }
-                data-testid="notification_button"
-              >
-                <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
-                  <span className={getNotificationBadge()} />
-                  <ForwardedIconComponent
-                    name="Bell"
-                    className={`side-bar-button-size h-4 w-4 ${
-                      activeState === "notifications"
-                        ? "text-primary"
-                        : "text-muted-foreground group-hover:text-primary"
-                    }`}
-                    strokeWidth={2}
-                  />
-                  <span className="hidden whitespace-nowrap">
-                    Notifications
-                  </span>
-                </div>
-              </Button>
-            </AlertDropdown>
+            <Button
+              ref={notificationRef}
+              unstyled
+              onClick={() =>
+                setActiveState((prev) =>
+                  prev === "notifications" ? null : "notifications",
+                )
+              }
+              data-testid="notification_button"
+            >
+              <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
+                <span className={getNotificationBadge()} />
+                <ForwardedIconComponent
+                  name="Bell"
+                  className={`side-bar-button-size h-4 w-4 ${
+                    activeState === "notifications"
+                      ? "text-primary"
+                      : "text-muted-foreground group-hover:text-primary"
+                  }`}
+                  strokeWidth={2}
+                />
+                <span className="hidden whitespace-nowrap">
+                  Notifications
+                </span>
+              </div>
+            </Button>
           </ShadTooltip>
         </AlertDropdown>
         <Separator
           orientation="vertical"
           className="my-auto h-7 dark:border-zinc-700"
         />
-
+        {ENABLE_DATASTAX_LANGFLOW && (
+          <>
+            <CustomOrgSelector />
+            <CustomProductSelector />
+          </>
+        )}
+        <WorkspaceSelector
+          onCreateWorkspace={() => setOpenCreateWorkspaceModal(true)}
+          onManageWorkspaces={() => navigate("/workspaces")}
+        />
+        <Button
+          unstyled
+          className="hidden items-center whitespace-nowrap pr-2 lg:inline"
+        >
+          <CustomLangflowCounts />
+        </Button>
+        <Separator
+          orientation="vertical"
+          className="my-auto ml-3 h-7 dark:border-zinc-700"
+        />
         <div className="flex">
           <CustomAccountMenu />
         </div>
       </div>
+
+      {/* Workspace Modals */}
+      <WorkspaceModal
+        open={openCreateWorkspaceModal}
+        onOpenChange={setOpenCreateWorkspaceModal}
+      />
     </div>
   );
 }

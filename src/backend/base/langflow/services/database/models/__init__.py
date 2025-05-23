@@ -6,6 +6,7 @@ from .message import MessageTable
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
+from .workspace import Workspace, WorkspaceMember
 
 __all__ = [
     "ApiKey",
@@ -16,4 +17,6 @@ __all__ = [
     "TransactionTable",
     "User",
     "Variable",
+    "Workspace",
+    "WorkspaceMember",
 ]

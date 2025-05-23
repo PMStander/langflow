@@ -1,4 +1,5 @@
 import { AddFolderType } from "@/pages/MainPage/entities";
+import useWorkspaceStore from "@/stores/workspaceStore";
 import { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -13,6 +14,7 @@ export const usePostFolders: useMutationFunctionType<
   IPostAddFolders
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
+  const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
   const addFoldersFn = async (newFolder: IPostAddFolders): Promise<void> => {
     const payload = {
@@ -20,6 +22,7 @@ export const usePostFolders: useMutationFunctionType<
       description: newFolder.data.description,
       flows_list: newFolder.data.flows ?? [],
       components_list: newFolder.data.components ?? [],
+      workspace_id: newFolder.data.workspace_id || currentWorkspaceId,
     };
 
     const res = await api.post(`${getURL("PROJECTS")}/`, payload);
@@ -29,7 +32,9 @@ export const usePostFolders: useMutationFunctionType<
   const mutation = mutate(["usePostFolders"], addFoldersFn, {
     ...options,
     onSuccess: () => {
-      return queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+      return queryClient.refetchQueries({
+        queryKey: ["useGetFolders", currentWorkspaceId]
+      });
     },
   });
 

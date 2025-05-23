@@ -98,15 +98,19 @@ async def read_projects(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
+    workspace_id: UUID | None = None,
 ):
     try:
-        projects = (
-            await session.exec(
-                select(Folder).where(
-                    or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
-                )
-            )
-        ).all()
+        # Base query to get folders for the current user
+        query = select(Folder).where(
+            or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
+        )
+
+        # Filter by workspace_id if provided
+        if workspace_id:
+            query = query.where(Folder.workspace_id == workspace_id)
+
+        projects = (await session.exec(query)).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
         return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
@@ -152,10 +156,10 @@ async def read_project(
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
-            
+
             try:
                 paginated_flows = await apaginate(session, stmt, params=params)
-                
+
                 # Convert Flow objects to FlowRead objects to ensure they're properly serialized
                 if hasattr(paginated_flows, 'items') and isinstance(paginated_flows.items, list):
                     paginated_flows.items = [FlowRead.model_validate(flow, from_attributes=True) for flow in paginated_flows.items]
@@ -163,23 +167,23 @@ async def read_project(
                     # If we get here, paginated_flows doesn't have the expected structure
                     # Throw an exception to fall back to the unpaginated approach
                     raise ValueError("Unexpected pagination result structure")
-                
+
                 return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
             except Exception as pagination_error:
                 # Log the pagination error but return unpaginated results
                 import logging
                 logging.error(f"Pagination error: {str(pagination_error)}")
-                
+
                 # Fall back to unpaginated results - fetch all flows without pagination
                 flows = await session.exec(stmt)
                 flows = flows.all()
-                
+
                 # Convert Flow objects to FlowRead objects
                 flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
-                
+
                 # Create a paginated-like result using the Page class from fastapi_pagination
                 from fastapi_pagination import Page
-                
+
                 unpaginated_results = Page(
                     items=flow_reads,
                     total=len(flow_reads),
@@ -187,7 +191,7 @@ async def read_project(
                     size=params.size if params else len(flow_reads),
                     pages=1  # Single page when using fallback
                 )
-                
+
                 return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=unpaginated_results)
 
     except Exception as e:

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow import Flow
     from langflow.services.database.models.folder import Folder
     from langflow.services.database.models.variable import Variable
+    from langflow.services.database.models.workspace import Workspace, WorkspaceMember
 
 
 class UserOptin(BaseModel):
@@ -32,6 +33,8 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
+    # Supabase Auth integration
+    supabase_user_id: str | None = Field(default=None, nullable=True, index=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
@@ -43,6 +46,15 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"cascade": "delete"},
     )
     folders: list["Folder"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    # Workspace relationships
+    owned_workspaces: list["Workspace"] = Relationship(
+        back_populates="owner",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    workspace_memberships: list["WorkspaceMember"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
@@ -69,6 +81,7 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
+    supabase_user_id: str | None = Field(default=None, nullable=True)
     optins: dict[str, Any] | None = Field(default=None)
 
 
@@ -79,4 +92,5 @@ class UserUpdate(SQLModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
+    supabase_user_id: str | None = None
     optins: dict[str, Any] | None = None

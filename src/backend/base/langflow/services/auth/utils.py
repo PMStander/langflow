@@ -401,6 +401,60 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
 
 
 async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
+    settings_service = get_settings_service()
+
+    # Try Supabase Auth first if enabled
+    if settings_service.settings.supabase_auth_enabled:
+        from langflow.services.deps import get_supabase_auth_service
+
+        try:
+            supabase_auth_service = get_supabase_auth_service()
+            # Try to sign in with Supabase
+            supabase_response = await supabase_auth_service.sign_in(username, password)
+
+            if supabase_response and supabase_response.user:
+                # Get or create user in internal database
+                supabase_user = supabase_response.user
+
+                # Check if we have a user with this Supabase ID
+                from langflow.services.database.models.user.model import User
+                from sqlmodel import select
+
+                stmt = select(User).where(User.supabase_user_id == supabase_user.id)
+                user = (await db.exec(stmt)).first()
+
+                if not user:
+                    # Try to find by username/email
+                    user = await get_user_by_username(db, username)
+
+                    if user:
+                        # Update the user with Supabase ID
+                        user.supabase_user_id = supabase_user.id
+                        await db.commit()
+                    else:
+                        # Create a new user
+                        # Check if this is the first user (should be superuser)
+                        stmt = select(User)
+                        users = (await db.exec(stmt)).all()
+                        is_first_user = len(users) == 0
+
+                        # Sync user to internal database
+                        user = await supabase_auth_service.sync_user_to_internal(
+                            supabase_user, is_superuser=is_first_user
+                        )
+
+                # Ensure user is active
+                if not user.is_active:
+                    user.is_active = True
+                    await db.commit()
+
+                return user
+        except Exception as e:
+            logger.debug(f"Supabase authentication failed, falling back to internal auth: {e}")
+            # Fall back to internal authentication
+            pass
+
+    # Internal authentication
     user = await get_user_by_username(db, username)
 
     if not user:

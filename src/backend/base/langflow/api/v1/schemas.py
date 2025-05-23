@@ -251,6 +251,8 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+    supabase_access_token: str | None = None
+    supabase_refresh_token: str | None = None
 
 
 class ApiKeyCreateRequest(BaseModel):
