@@ -1,6 +1,6 @@
 from langflow.api.v1.ai_assistant import router as ai_assistant_router
 from langflow.api.v1.api_key import router as api_key_router
-from langflow.api.v1.book import books_router, templates_router
+from langflow.api.v1.book import books_router, templates_router, export_router, publish_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
@@ -37,6 +37,8 @@ __all__ = [
     "starter_projects_router",
     "store_router",
     "templates_router",
+    "export_router",
+    "publish_router",
     "users_router",
     "validate_router",
     "variables_router",
