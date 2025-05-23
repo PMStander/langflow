@@ -1,9 +1,8 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select, or_
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.crm.client import (
@@ -12,7 +11,10 @@ from langflow.services.database.models.crm.client import (
     ClientRead,
     ClientUpdate,
 )
-from langflow.services.database.models.workspace import Workspace, WorkspaceMember
+from langflow.api.v1.crm.utils import (
+    check_workspace_access,
+    get_entity_access_filter,
+)
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -26,32 +28,14 @@ async def create_client(
 ):
     """Create a new client."""
     try:
-        # Check if user has access to the workspace
-        workspace = (
-            await session.exec(
-                select(Workspace)
-                .where(
-                    Workspace.id == client.workspace_id,
-                    or_(
-                        Workspace.owner_id == current_user.id,
-                        Workspace.id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
-            )
-        ).first()
-        
-        if not workspace:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found or you don't have permission to create clients in it",
-            )
-        
+        # Check if user has access to the workspace with edit permission
+        await check_workspace_access(
+            session,
+            client.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
         # Create the client
         db_client = Client(
             **client.model_dump(),
@@ -88,27 +72,16 @@ async def read_clients(
         # Base query to get clients from workspaces the user has access to
         query = (
             select(Client)
-            .where(
-                or_(
-                    Client.workspace_id.in_(
-                        select(Workspace.id)
-                        .where(Workspace.owner_id == current_user.id)
-                    ),
-                    Client.workspace_id.in_(
-                        select(WorkspaceMember.workspace_id)
-                        .where(WorkspaceMember.user_id == current_user.id)
-                    )
-                )
-            )
+            .where(get_entity_access_filter(Client, current_user.id))
         )
-        
+
         # Add filters if provided
         if workspace_id:
             query = query.where(Client.workspace_id == workspace_id)
-        
+
         if status:
             query = query.where(Client.status == status)
-        
+
         # Execute query
         clients = (await session.exec(query)).all()
         return clients
@@ -134,26 +107,17 @@ async def read_client(
                 select(Client)
                 .where(
                     Client.id == client_id,
-                    or_(
-                        Client.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Client.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(WorkspaceMember.user_id == current_user.id)
-                        )
-                    )
+                    get_entity_access_filter(Client, current_user.id)
                 )
             )
         ).first()
-        
+
         if not client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Client not found or access denied",
             )
-        
+
         return client
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -174,44 +138,37 @@ async def update_client(
 ):
     """Update a client."""
     try:
-        # Check if user has access to update the client
+        # Check if client exists
         db_client = (
             await session.exec(
                 select(Client)
-                .where(
-                    Client.id == client_id,
-                    or_(
-                        Client.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Client.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
+                .where(Client.id == client_id)
             )
         ).first()
-        
+
         if not db_client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Client not found or you don't have permission to update it",
+                detail="Client not found",
             )
-        
+
+        # Check if user has edit permission for the client's workspace
+        await check_workspace_access(
+            session,
+            db_client.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
         # Update client fields
         client_data = client.model_dump(exclude_unset=True)
         for key, value in client_data.items():
             setattr(db_client, key, value)
-        
+
         # Update the updated_at timestamp
         from datetime import datetime, timezone
         db_client.updated_at = datetime.now(timezone.utc)
-        
+
         await session.commit()
         await session.refresh(db_client)
         return db_client
@@ -234,35 +191,28 @@ async def delete_client(
 ):
     """Delete a client."""
     try:
-        # Check if user has access to delete the client
+        # Check if client exists
         db_client = (
             await session.exec(
                 select(Client)
-                .where(
-                    Client.id == client_id,
-                    or_(
-                        Client.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Client.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role == "owner"
-                            )
-                        )
-                    )
-                )
+                .where(Client.id == client_id)
             )
         ).first()
-        
+
         if not db_client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Client not found or you don't have permission to delete it",
+                detail="Client not found",
             )
-        
+
+        # Check if user has owner permission for the client's workspace
+        await check_workspace_access(
+            session,
+            db_client.workspace_id,
+            current_user,
+            require_owner_permission=True
+        )
+
         await session.delete(db_client)
         await session.commit()
         return None

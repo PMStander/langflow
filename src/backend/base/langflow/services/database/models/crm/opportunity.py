@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, Column
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -27,7 +28,12 @@ class Opportunity(OpportunityBase, table=True):  # type: ignore[call-arg]
     """Opportunity model for database."""
     __tablename__ = "opportunity"
 
-    id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
+    id: UUIDstr = Field(
+        default_factory=uuid4,
+        primary_key=True,
+        unique=True,
+        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+    )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     client_id: UUIDstr = Field(index=True, foreign_key="client.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")

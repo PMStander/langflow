@@ -8,11 +8,12 @@ import {
   TrendingUp,
   CheckSquare,
   Settings,
+  BarChart,
 } from "lucide-react";
 
 /**
  * CRM Sidebar Component
- * 
+ *
  * Provides navigation for the CRM module with links to dashboard, clients, invoices, etc.
  */
 export default function CRMSidebarComponent() {
@@ -52,6 +53,12 @@ export default function CRMSidebarComponent() {
       path: "/crm/tasks",
       icon: <CheckSquare className="h-5 w-5" />,
       view: "tasks" as const,
+    },
+    {
+      name: "Reports",
+      path: "/crm/reports",
+      icon: <BarChart className="h-5 w-5" />,
+      view: "reports" as const,
     },
   ];
 

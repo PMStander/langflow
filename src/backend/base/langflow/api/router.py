@@ -29,6 +29,7 @@ from langflow.api.v1.crm import (
     opportunities_router,
     tasks_router,
     dashboard_router,
+    reports_router,
 )
 from langflow.api.v2 import files_router as files_router_v2
 
@@ -71,6 +72,7 @@ router_v1.include_router(invoices_router)
 router_v1.include_router(opportunities_router)
 router_v1.include_router(tasks_router)
 router_v1.include_router(dashboard_router)
+router_v1.include_router(reports_router)
 
 router_v2.include_router(files_router_v2)
 
