@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.crm.invoice import Invoice
     from langflow.services.database.models.crm.opportunity import Opportunity
     from langflow.services.database.models.crm.task import Task
+    from langflow.services.database.models.book import Book, BookTemplate
 
 
 class UserOptin(BaseModel):
@@ -86,6 +87,12 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     assigned_tasks: list["Task"] = Relationship(
         back_populates="assignee",
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to", "cascade": "delete"},
+    )
+
+    # Book Creator relationships
+    books: list["Book"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "delete"})
+    book_templates: list["BookTemplate"] = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "User.id == BookTemplate.user_id", "cascade": "delete"}
     )
 
 

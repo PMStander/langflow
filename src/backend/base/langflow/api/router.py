@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from langflow.api.v1 import (
     ai_assistant_router,
     api_key_router,
+    books_router,
     chat_router,
     endpoints_router,
     files_router,
@@ -16,6 +17,7 @@ from langflow.api.v1 import (
     projects_router,
     starter_projects_router,
     store_router,
+    templates_router,
     users_router,
     validate_router,
     variables_router,
@@ -65,6 +67,10 @@ router_v1.include_router(mcp_router)
 router_v1.include_router(mcp_projects_router)
 router_v1.include_router(workspaces_router)
 router_v1.include_router(workspace_members_router)
+
+# Book Creator routers
+router_v1.include_router(books_router)
+router_v1.include_router(templates_router)
 
 # CRM routers
 router_v1.include_router(clients_router)

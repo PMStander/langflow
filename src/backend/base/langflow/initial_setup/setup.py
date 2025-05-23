@@ -27,6 +27,7 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.initial_setup.book_templates import get_system_book_templates
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -920,6 +921,24 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     project_tags=project_tags,
                     new_folder_id=new_folder.id,
                 )
+
+
+async def initialize_book_templates() -> None:
+    """Initialize the book templates."""
+    settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        return
+
+    async with session_scope() as session:
+        # Get all system templates
+        templates = get_system_book_templates()
+
+        # Add templates to the database
+        for template in templates:
+            session.add(template)
+
+        await session.commit()
+    logger.info("Book templates initialized")
 
 
 async def initialize_super_user_if_needed() -> None:
