@@ -28,16 +28,16 @@ class ClientBase(SQLModel):
 class Client(ClientBase, table=True):  # type: ignore[call-arg]
     """Client model for database."""
     __tablename__ = "client"
-    
+
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     workspace: "Workspace" = Relationship(back_populates="clients")
-    creator: "User" = Relationship(back_populates="created_clients", sa_relationship_kwargs={"foreign_keys": [created_by]})
+    creator: "User" = Relationship(back_populates="created_clients", sa_relationship_kwargs={"foreign_keys": "Client.created_by"})
     invoices: list["Invoice"] = Relationship(back_populates="client", sa_relationship_kwargs={"cascade": "delete"})
     opportunities: list["Opportunity"] = Relationship(back_populates="client", sa_relationship_kwargs={"cascade": "delete"})
     tasks: list["Task"] = Relationship(back_populates="client", sa_relationship_kwargs={"cascade": "delete"})

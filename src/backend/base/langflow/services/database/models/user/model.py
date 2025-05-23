@@ -69,23 +69,23 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     # CRM relationships
     created_clients: list["Client"] = Relationship(
         back_populates="creator",
-        sa_relationship_kwargs={"foreign_keys": "Client.created_by", "cascade": "delete"},
+        sa_relationship_kwargs={"foreign_keys": "[Client.created_by]", "cascade": "delete"},
     )
     created_invoices: list["Invoice"] = Relationship(
         back_populates="creator",
-        sa_relationship_kwargs={"foreign_keys": "Invoice.created_by", "cascade": "delete"},
+        sa_relationship_kwargs={"foreign_keys": "[Invoice.created_by]", "cascade": "delete"},
     )
     created_opportunities: list["Opportunity"] = Relationship(
         back_populates="creator",
-        sa_relationship_kwargs={"foreign_keys": "Opportunity.created_by", "cascade": "delete"},
+        sa_relationship_kwargs={"foreign_keys": "[Opportunity.created_by]", "cascade": "delete"},
     )
     created_tasks: list["Task"] = Relationship(
         back_populates="creator",
-        sa_relationship_kwargs={"foreign_keys": "Task.created_by", "cascade": "delete"},
+        sa_relationship_kwargs={"foreign_keys": "[Task.created_by]", "cascade": "delete"},
     )
     assigned_tasks: list["Task"] = Relationship(
         back_populates="assignee",
-        sa_relationship_kwargs={"foreign_keys": "Task.assigned_to", "cascade": "delete"},
+        sa_relationship_kwargs={"foreign_keys": "[Task.assigned_to]", "cascade": "delete"},
     )
 
 

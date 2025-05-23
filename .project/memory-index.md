@@ -34,6 +34,7 @@ We've completed Phase 1 (Foundation) of the Workspace Dashboard & CRM feature fo
 - [Workspace Dashboard Implementation Timeline](plans/workspace-dashboard-implementation-timeline.md) - Implementation timeline with task dependencies
 
 ## Task Logs
+- [SQLAlchemy Foreign Key Fix](task-logs/task-log_2025-05-23_sqlalchemy-foreign-key-fix.md) - Fix for SQLAlchemy foreign key relationship errors in CRM models
 - [CRM Frontend Implementation](task-logs/task-log_2025-05-24_crm-frontend-implementation.md) - Implementation of frontend components for CRM module
 - [CRM API Endpoints Implementation](task-logs/task-log_2025-05-24_crm-api-endpoints-implementation.md) - Implementation of API endpoints for CRM entities
 - [CRM Database Models Implementation](task-logs/task-log_2025-05-24_crm-database-models-implementation.md) - Implementation of CRM entity database models
@@ -68,7 +69,8 @@ We've completed Phase 1 (Foundation) of the Workspace Dashboard & CRM feature fo
 ## Memory Checksums
 - activeContext.md: 2025-05-24-16-00
 - progress.md: 2025-05-24-16-00
-- memory-index.md: 2025-05-24-16-00
+- memory-index.md: 2025-05-23-11-45
+- sqlalchemy-best-practices.md: 2025-05-23-11-45
 
 ## Active Plans
 
@@ -78,6 +80,7 @@ We've completed Phase 1 (Foundation) of the Workspace Dashboard & CRM feature fo
 ## Knowledge Base
 - [Lessons Learned](knowledge/lessons-learned.md) - Important lessons from development
 - [Best Practices](knowledge/best-practices.md) - Coding and architecture best practices
+- [SQLAlchemy Best Practices](knowledge/sqlalchemy-best-practices.md) - Best practices for SQLAlchemy/SQLModel database operations
 - [Technical Decisions](knowledge/decisions.md) - Record of important technical decisions
 
 ## Directory Structure

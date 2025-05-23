@@ -27,18 +27,18 @@ class InvoiceBase(SQLModel):
 class Invoice(InvoiceBase, table=True):  # type: ignore[call-arg]
     """Invoice model for database."""
     __tablename__ = "invoice"
-    
+
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     client_id: UUIDstr = Field(index=True, foreign_key="client.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     workspace: "Workspace" = Relationship(back_populates="invoices")
     client: "Client" = Relationship(back_populates="invoices")
-    creator: "User" = Relationship(back_populates="created_invoices", sa_relationship_kwargs={"foreign_keys": [created_by]})
+    creator: "User" = Relationship(back_populates="created_invoices", sa_relationship_kwargs={"foreign_keys": "Invoice.created_by"})
     tasks: list["Task"] = Relationship(back_populates="invoice", sa_relationship_kwargs={"cascade": "delete"})
 
 

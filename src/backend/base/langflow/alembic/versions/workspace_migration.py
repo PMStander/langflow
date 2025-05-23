@@ -68,12 +68,20 @@ def upgrade() -> None:
         columns = [c["name"] for c in inspector.get_columns("folder")]
         if "workspace_id" not in columns:
             op.add_column("folder", sa.Column("workspace_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True))
-            op.create_foreign_key(None, "folder", "workspace", ["workspace_id"], ["id"])
-            op.create_index(op.f("ix_folder_workspace_id"), "folder", ["workspace_id"], unique=False)
 
-            # Update unique constraint on folder table
-            op.drop_constraint("unique_folder_name", "folder")
-            op.create_unique_constraint("unique_folder_name_per_workspace", "folder", ["user_id", "name", "workspace_id"])
+            # Use batch operations for SQLite compatibility
+            with op.batch_alter_table("folder", schema=None) as batch_op:
+                batch_op.create_foreign_key(None, "workspace", ["workspace_id"], ["id"])
+                batch_op.create_index("ix_folder_workspace_id", ["workspace_id"], unique=False)
+
+                # Check if the constraint exists before trying to drop it
+                constraints = inspector.get_unique_constraints("folder")
+                constraint_names = [constraint['name'] for constraint in constraints]
+
+                if "unique_folder_name" in constraint_names:
+                    batch_op.drop_constraint("unique_folder_name", type_="unique")
+
+                batch_op.create_unique_constraint("unique_folder_name_per_workspace", ["user_id", "name", "workspace_id"])
 
     # Create personal workspace for each existing user
     conn = op.get_bind()
@@ -138,16 +146,48 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)  # type: ignore
+
     # Remove workspace_id from folder table
-    op.drop_constraint("unique_folder_name_per_workspace", "folder")
-    op.create_unique_constraint("unique_folder_name", "folder", ["user_id", "name"])
-    op.drop_index(op.f("ix_folder_workspace_id"), "folder")
-    op.drop_constraint(None, "folder", type_="foreignkey")
-    op.drop_column("folder", "workspace_id")
+    with op.batch_alter_table("folder", schema=None) as batch_op:
+        # Check if the constraint exists before trying to drop it
+        constraints = inspector.get_unique_constraints("folder")
+        constraint_names = [constraint['name'] for constraint in constraints]
 
-    # Drop workspace_member table
-    op.drop_table("workspace_member")
+        if "unique_folder_name_per_workspace" in constraint_names:
+            batch_op.drop_constraint("unique_folder_name_per_workspace", type_="unique")
+            batch_op.create_unique_constraint("unique_folder_name", ["user_id", "name"])
 
-    # Drop workspace table
-    op.drop_index(op.f("ix_workspace_name"), "workspace")
-    op.drop_table("workspace")
+        # Check if the index exists before trying to drop it
+        indexes = inspector.get_indexes("folder")
+        index_names = [index['name'] for index in indexes]
+
+        if "ix_folder_workspace_id" in index_names:
+            batch_op.drop_index("ix_folder_workspace_id")
+
+        # Check for foreign keys
+        foreign_keys = inspector.get_foreign_keys("folder")
+        for fk in foreign_keys:
+            if fk.get('referred_table') == 'workspace' and 'workspace_id' in fk.get('constrained_columns', []):
+                batch_op.drop_constraint(fk.get('name'), type_="foreignkey")
+
+    # Check if the column exists before trying to drop it
+    columns = [c["name"] for c in inspector.get_columns("folder")]
+    if "workspace_id" in columns:
+        op.drop_column("folder", "workspace_id")
+
+    # Drop workspace_member table if it exists
+    if "workspace_member" in inspector.get_table_names():
+        op.drop_table("workspace_member")
+
+    # Drop workspace table if it exists
+    if "workspace" in inspector.get_table_names():
+        # Check if the index exists before trying to drop it
+        indexes = inspector.get_indexes("workspace")
+        index_names = [index['name'] for index in indexes]
+
+        if "ix_workspace_name" in index_names:
+            op.drop_index(op.f("ix_workspace_name"), "workspace")
+
+        op.drop_table("workspace")
