@@ -9,6 +9,7 @@ import {
   CheckSquare,
   Settings,
   BarChart,
+  Package,
 } from "lucide-react";
 
 /**
@@ -53,6 +54,12 @@ export default function CRMSidebarComponent() {
       path: "/crm/tasks",
       icon: <CheckSquare className="h-5 w-5" />,
       view: "tasks" as const,
+    },
+    {
+      name: "Products",
+      path: "/crm/products",
+      icon: <Package className="h-5 w-5" />,
+      view: "products" as const,
     },
     {
       name: "Reports",

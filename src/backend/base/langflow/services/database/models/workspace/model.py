@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from langflow.services.database.models.crm.invoice import Invoice
     from langflow.services.database.models.crm.opportunity import Opportunity
     from langflow.services.database.models.crm.task import Task
+    from langflow.services.database.models.crm.product import Product
+    from langflow.services.database.models.crm.product_category import ProductCategory
+    from langflow.services.database.models.crm.product_attribute import ProductAttribute
 
 
 class WorkspaceBase(SQLModel):
@@ -39,6 +42,9 @@ class Workspace(WorkspaceBase, table=True):  # type: ignore[call-arg]
     invoices: list["Invoice"] = Relationship(back_populates="workspace")
     opportunities: list["Opportunity"] = Relationship(back_populates="workspace")
     tasks: list["Task"] = Relationship(back_populates="workspace")
+    products: list["Product"] = Relationship(back_populates="workspace")
+    product_categories: list["ProductCategory"] = Relationship(back_populates="workspace")
+    product_attributes: list["ProductAttribute"] = Relationship(back_populates="workspace")
 
     __table_args__ = (UniqueConstraint("owner_id", "name", name="unique_workspace_name"),)
 

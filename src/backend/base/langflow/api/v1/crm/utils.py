@@ -2,7 +2,8 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from .error_handling import get_http_status_code
 from sqlmodel import select, or_, func
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -71,7 +72,7 @@ async def check_workspace_access(
             detail = "Workspace not found or you don't have owner permission"
 
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=get_http_status_code("HTTP_404_NOT_FOUND"),
             detail=detail,
         )
 

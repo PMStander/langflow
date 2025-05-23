@@ -6,6 +6,7 @@ import InvoicesPage from "../pages/CRMPage/InvoicesPage";
 import OpportunitiesPage from "../pages/CRMPage/OpportunitiesPage";
 import TasksPage from "../pages/CRMPage/TasksPage";
 import ReportsPage from "../pages/CRMPage/ReportsPage";
+import ProductsPage from "../pages/CRMPage/ProductsPage";
 
 /**
  * CRM Routes definition
@@ -22,6 +23,7 @@ export const CRMRoutes = () => {
       <Route path="invoices" element={<InvoicesPage />} />
       <Route path="opportunities" element={<OpportunitiesPage />} />
       <Route path="tasks" element={<TasksPage />} />
+      <Route path="products" element={<ProductsPage />} />
       <Route path="reports" element={<ReportsPage />} />
     </Route>
   );
