@@ -1,6 +1,7 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "react-router-dom";
+import { LayoutDashboard, Flow, Users, FileText, TrendingUp, CheckSquare } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +13,7 @@ import {
 } from "../../ui/sidebar";
 
 type SideBarButtonsComponentProps = {
-  items: {
+  items?: {
     href?: string;
     title: string;
     icon: React.ReactNode;
@@ -20,11 +21,32 @@ type SideBarButtonsComponentProps = {
   handleOpenNewFolderModal?: () => void;
 };
 
-const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
+const SideBarButtonsComponent = ({ items: propItems }: SideBarButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
 
   const isMobile = useIsMobile();
+
+  // Default navigation items if none provided
+  const defaultItems = [
+    {
+      href: "/dashboard",
+      title: "Dashboard",
+      icon: <LayoutDashboard className="h-5 w-5" />,
+    },
+    {
+      href: "/flows",
+      title: "Flows",
+      icon: <Flow className="h-5 w-5" />,
+    },
+    {
+      href: "/crm/dashboard",
+      title: "CRM",
+      icon: <Users className="h-5 w-5" />,
+    },
+  ];
+
+  const items = propItems || defaultItems;
 
   return (
     <Sidebar collapsible={isMobile ? "icon" : "none"} className="border-none">
@@ -38,7 +60,9 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
                     <SidebarMenuButton
                       size="md"
                       isActive={
-                        item.href ? pathname.endsWith(item.href) : false
+                        item.href ?
+                          (item.href === "/crm/dashboard" ? pathname.startsWith("/crm") : pathname.endsWith(item.href))
+                          : false
                       }
                       data-testid={`sidebar-nav-${item.title}`}
                       tooltip={item.title}

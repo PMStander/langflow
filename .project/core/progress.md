@@ -85,6 +85,30 @@
 
 ## Current Development Focus
 
+### Workspace Dashboard & CRM Feature
+- **Status**: 🔴 In Progress
+- **Details**: Implementing a comprehensive CRM system integrated with the existing workspace functionality, including a dashboard for workspace data visualization, CRM entity management, and context-aware navigation.
+- **Priority**: High
+- **Estimated Completion**: 5 weeks
+- **Progress**:
+  - ✅ Planning: Completed comprehensive implementation plan, database schema design, and UI mockups
+  - ✅ Phase 1 (Foundation):
+    - ✅ CRM Database Models: Implemented Client, Invoice, Opportunity, and Task models with proper relationships
+    - ✅ Basic API Endpoints: Implemented CRUD endpoints for all CRM entities and dashboard data
+    - ✅ Dashboard Navigation: Added CRM sidebar navigation and main navigation integration
+    - ✅ TypeScript Interfaces: Created interfaces and API hooks for all CRM entities
+  - 🔄 Phase 2 (Dashboard Implementation):
+    - ✅ Dashboard Layout: Created main dashboard layout with statistics cards
+    - ✅ Data Visualization: Implemented client distribution chart and activity lists
+    - 🔄 Advanced Analytics: In progress
+  - 🔄 Phase 3 (CRM Core Features):
+    - ✅ Client Management: Implemented clients list view with CRUD functionality
+    - 🔄 Invoice Management: In progress
+    - 🔄 Opportunity Management: In progress
+    - 🔄 Task Management: In progress
+  - ⏳ Phase 4 (Advanced Features): Not started
+  - ⏳ Phase 5 (Integration and Polish): Not started
+
 ### AI Flow Builder Assistant
 - **Status**: 🔴 In Progress
 - **Details**: Implementing an AI assistant feature that can interpret natural language instructions to automatically build appropriate LangChain flows.
@@ -114,6 +138,12 @@
 ## Upcoming Roadmap
 
 ### Short-term (1-3 months)
+
+#### Workspace Dashboard & CRM Feature
+- **Status**: 🔴 In Progress
+- **Details**: Implementing a comprehensive CRM system integrated with the existing workspace functionality.
+- **Priority**: High
+- **Estimated Completion**: Q2 2025
 
 #### Enhanced Collaboration Features
 - **Status**: 🟠 Planned

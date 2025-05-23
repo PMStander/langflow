@@ -7,6 +7,7 @@ from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
 from .workspace import Workspace, WorkspaceMember
+from .crm import Client, Invoice, Opportunity, Task
 
 __all__ = [
     "ApiKey",
@@ -19,4 +20,8 @@ __all__ = [
     "Variable",
     "Workspace",
     "WorkspaceMember",
+    "Client",
+    "Invoice",
+    "Opportunity",
+    "Task",
 ]
