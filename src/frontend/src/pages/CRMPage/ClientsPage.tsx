@@ -34,19 +34,20 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { MoreHorizontal, Plus, Search, Trash, Edit, Eye } from "lucide-react";
+import { MoreHorizontal, Plus, Search, Trash, Edit, Eye, Download } from "lucide-react";
 import { useCRMStore } from "@/stores/crmStore";
+import { exportEntityData } from "@/utils/exportUtils";
 
 export default function ClientsPage() {
   // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-  
+
   // Client filters from CRM store
   const { clientFilters, setClientFilters } = useCRMStore((state) => ({
     clientFilters: state.clientFilters,
     setClientFilters: state.setClientFilters,
   }));
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState(clientFilters.searchTerm || "");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -97,7 +98,7 @@ export default function ClientsPage() {
   // Handle create client
   const handleCreateClient = () => {
     if (!currentWorkspaceId || !newClient.name) return;
-    
+
     createClient(
       {
         name: newClient.name,
@@ -242,29 +243,50 @@ export default function ClientsPage() {
               <Search className="h-4 w-4" />
             </Button>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                {clientFilters.status ? `Status: ${clientFilters.status}` : "All Statuses"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleStatusFilter(undefined)}>
-                All Statuses
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusFilter("active")}>
-                Active
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusFilter("inactive")}>
-                Inactive
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusFilter("lead")}>
-                Lead
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex space-x-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  {clientFilters.status ? `Status: ${clientFilters.status}` : "All Statuses"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleStatusFilter(undefined)}>
+                  All Statuses
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusFilter("active")}>
+                  Active
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusFilter("inactive")}>
+                  Inactive
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusFilter("lead")}>
+                  Lead
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportEntityData(filteredClients, 'client', 'csv')}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportEntityData(filteredClients, 'client', 'json')}>
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {isLoading ? (

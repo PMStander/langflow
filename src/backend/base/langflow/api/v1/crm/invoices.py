@@ -1,9 +1,8 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select, or_
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.crm.invoice import (
@@ -12,7 +11,10 @@ from langflow.services.database.models.crm.invoice import (
     InvoiceRead,
     InvoiceUpdate,
 )
-from langflow.services.database.models.workspace import Workspace, WorkspaceMember
+from langflow.api.v1.crm.utils import (
+    check_workspace_access,
+    get_entity_access_filter,
+)
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
@@ -26,32 +28,14 @@ async def create_invoice(
 ):
     """Create a new invoice."""
     try:
-        # Check if user has access to the workspace
-        workspace = (
-            await session.exec(
-                select(Workspace)
-                .where(
-                    Workspace.id == invoice.workspace_id,
-                    or_(
-                        Workspace.owner_id == current_user.id,
-                        Workspace.id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
-            )
-        ).first()
-        
-        if not workspace:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found or you don't have permission to create invoices in it",
-            )
-        
+        # Check if user has access to the workspace with edit permission
+        await check_workspace_access(
+            session,
+            invoice.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
         # Create the invoice
         db_invoice = Invoice(
             **invoice.model_dump(),
@@ -89,30 +73,19 @@ async def read_invoices(
         # Base query to get invoices from workspaces the user has access to
         query = (
             select(Invoice)
-            .where(
-                or_(
-                    Invoice.workspace_id.in_(
-                        select(Workspace.id)
-                        .where(Workspace.owner_id == current_user.id)
-                    ),
-                    Invoice.workspace_id.in_(
-                        select(WorkspaceMember.workspace_id)
-                        .where(WorkspaceMember.user_id == current_user.id)
-                    )
-                )
-            )
+            .where(get_entity_access_filter(Invoice, current_user.id))
         )
-        
+
         # Add filters if provided
         if workspace_id:
             query = query.where(Invoice.workspace_id == workspace_id)
-        
+
         if client_id:
             query = query.where(Invoice.client_id == client_id)
-        
+
         if status:
             query = query.where(Invoice.status == status)
-        
+
         # Execute query
         invoices = (await session.exec(query)).all()
         return invoices
@@ -132,32 +105,23 @@ async def read_invoice(
 ):
     """Get a specific invoice."""
     try:
-        # Check if user has access to the invoice's workspace
+        # Check if invoice exists and user has access to it
         invoice = (
             await session.exec(
                 select(Invoice)
                 .where(
                     Invoice.id == invoice_id,
-                    or_(
-                        Invoice.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Invoice.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(WorkspaceMember.user_id == current_user.id)
-                        )
-                    )
+                    get_entity_access_filter(Invoice, current_user.id)
                 )
             )
         ).first()
-        
+
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Invoice not found or access denied",
             )
-        
+
         return invoice
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -178,44 +142,37 @@ async def update_invoice(
 ):
     """Update an invoice."""
     try:
-        # Check if user has access to update the invoice
+        # Check if invoice exists
         db_invoice = (
             await session.exec(
                 select(Invoice)
-                .where(
-                    Invoice.id == invoice_id,
-                    or_(
-                        Invoice.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Invoice.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
+                .where(Invoice.id == invoice_id)
             )
         ).first()
-        
+
         if not db_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Invoice not found or you don't have permission to update it",
+                detail="Invoice not found",
             )
-        
+
+        # Check if user has edit permission for the invoice's workspace
+        await check_workspace_access(
+            session,
+            db_invoice.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
         # Update invoice fields
         invoice_data = invoice.model_dump(exclude_unset=True)
         for key, value in invoice_data.items():
             setattr(db_invoice, key, value)
-        
+
         # Update the updated_at timestamp
         from datetime import datetime, timezone
         db_invoice.updated_at = datetime.now(timezone.utc)
-        
+
         await session.commit()
         await session.refresh(db_invoice)
         return db_invoice
@@ -238,35 +195,28 @@ async def delete_invoice(
 ):
     """Delete an invoice."""
     try:
-        # Check if user has access to delete the invoice
+        # Check if invoice exists
         db_invoice = (
             await session.exec(
                 select(Invoice)
-                .where(
-                    Invoice.id == invoice_id,
-                    or_(
-                        Invoice.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Invoice.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role == "owner"
-                            )
-                        )
-                    )
-                )
+                .where(Invoice.id == invoice_id)
             )
         ).first()
-        
+
         if not db_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Invoice not found or you don't have permission to delete it",
+                detail="Invoice not found",
             )
-        
+
+        # Check if user has owner permission for the invoice's workspace
+        await check_workspace_access(
+            session,
+            db_invoice.workspace_id,
+            current_user,
+            require_owner_permission=True
+        )
+
         await session.delete(db_invoice)
         await session.commit()
         return None

@@ -156,6 +156,12 @@ class DatabaseService(Service):
                 "timeout": settings.db_connect_timeout,
             }
 
+        # Add SSL parameters for Supabase connections
+        if settings.database_url and "supabase" in settings.database_url:
+            return {
+                "sslmode": "require",
+            }
+
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:

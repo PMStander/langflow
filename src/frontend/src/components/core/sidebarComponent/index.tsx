@@ -1,7 +1,7 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Flow, Users, FileText, TrendingUp, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Share2, Users, FileText, TrendingUp, CheckSquare } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -37,7 +37,7 @@ const SideBarButtonsComponent = ({ items: propItems }: SideBarButtonsComponentPr
     {
       href: "/flows",
       title: "Flows",
-      icon: <Flow className="h-5 w-5" />,
+      icon: <Share2 className="h-5 w-5" />,
     },
     {
       href: "/crm/dashboard",

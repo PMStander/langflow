@@ -1,22 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { 
-  Client, 
-  ClientCreate, 
-  ClientUpdate, 
-  Invoice, 
-  InvoiceCreate, 
-  InvoiceUpdate, 
-  Opportunity, 
-  OpportunityCreate, 
-  OpportunityUpdate, 
-  Task, 
-  TaskCreate, 
+import {
+  Client,
+  ClientCreate,
+  ClientUpdate,
+  Invoice,
+  InvoiceCreate,
+  InvoiceUpdate,
+  Opportunity,
+  OpportunityCreate,
+  OpportunityUpdate,
+  Task,
+  TaskCreate,
   TaskUpdate,
   DashboardStats,
   ClientDistribution,
   RecentActivityItem
 } from "../../../types/crm";
-import { apiClient } from "../api";
+import { api as apiClient } from "../api";
 
 // Client API
 export const useGetClients = (params?: { workspace_id?: string; status?: string }) => {
@@ -29,6 +29,8 @@ export const useGetClients = (params?: { workspace_id?: string; status?: string 
   });
 };
 
+export const useGetClientsQuery = useGetClients;
+
 export const useGetClient = (id: string) => {
   return useQuery<Client>({
     queryKey: ['client', id],
@@ -39,6 +41,8 @@ export const useGetClient = (id: string) => {
     enabled: !!id,
   });
 };
+
+export const useGetClientQuery = useGetClient;
 
 export const useCreateClient = () => {
   const queryClient = useQueryClient();
@@ -53,6 +57,8 @@ export const useCreateClient = () => {
     },
   });
 };
+
+export const useCreateClientMutation = useCreateClient;
 
 export const useUpdateClient = () => {
   const queryClient = useQueryClient();
@@ -69,6 +75,8 @@ export const useUpdateClient = () => {
   });
 };
 
+export const useUpdateClientMutation = useUpdateClient;
+
 export const useDeleteClient = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -82,6 +90,8 @@ export const useDeleteClient = () => {
   });
 };
 
+export const useDeleteClientMutation = useDeleteClient;
+
 // Invoice API
 export const useGetInvoices = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
   return useQuery<Invoice[]>({
@@ -93,6 +103,8 @@ export const useGetInvoices = (params?: { workspace_id?: string; client_id?: str
   });
 };
 
+export const useGetInvoicesQuery = useGetInvoices;
+
 export const useGetInvoice = (id: string) => {
   return useQuery<Invoice>({
     queryKey: ['invoice', id],
@@ -103,6 +115,8 @@ export const useGetInvoice = (id: string) => {
     enabled: !!id,
   });
 };
+
+export const useGetInvoiceQuery = useGetInvoice;
 
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
@@ -117,6 +131,8 @@ export const useCreateInvoice = () => {
     },
   });
 };
+
+export const useCreateInvoiceMutation = useCreateInvoice;
 
 export const useUpdateInvoice = () => {
   const queryClient = useQueryClient();
@@ -133,6 +149,8 @@ export const useUpdateInvoice = () => {
   });
 };
 
+export const useUpdateInvoiceMutation = useUpdateInvoice;
+
 export const useDeleteInvoice = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -146,6 +164,8 @@ export const useDeleteInvoice = () => {
   });
 };
 
+export const useDeleteInvoiceMutation = useDeleteInvoice;
+
 // Opportunity API
 export const useGetOpportunities = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
   return useQuery<Opportunity[]>({
@@ -157,6 +177,8 @@ export const useGetOpportunities = (params?: { workspace_id?: string; client_id?
   });
 };
 
+export const useGetOpportunitiesQuery = useGetOpportunities;
+
 export const useGetOpportunity = (id: string) => {
   return useQuery<Opportunity>({
     queryKey: ['opportunity', id],
@@ -167,6 +189,8 @@ export const useGetOpportunity = (id: string) => {
     enabled: !!id,
   });
 };
+
+export const useGetOpportunityQuery = useGetOpportunity;
 
 export const useCreateOpportunity = () => {
   const queryClient = useQueryClient();
@@ -181,6 +205,8 @@ export const useCreateOpportunity = () => {
     },
   });
 };
+
+export const useCreateOpportunityMutation = useCreateOpportunity;
 
 export const useUpdateOpportunity = () => {
   const queryClient = useQueryClient();
@@ -197,6 +223,8 @@ export const useUpdateOpportunity = () => {
   });
 };
 
+export const useUpdateOpportunityMutation = useUpdateOpportunity;
+
 export const useDeleteOpportunity = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -210,10 +238,12 @@ export const useDeleteOpportunity = () => {
   });
 };
 
+export const useDeleteOpportunityMutation = useDeleteOpportunity;
+
 // Task API
-export const useGetTasks = (params?: { 
-  workspace_id?: string; 
-  client_id?: string; 
+export const useGetTasks = (params?: {
+  workspace_id?: string;
+  client_id?: string;
   invoice_id?: string;
   opportunity_id?: string;
   assigned_to?: string;
@@ -229,6 +259,8 @@ export const useGetTasks = (params?: {
   });
 };
 
+export const useGetTasksQuery = useGetTasks;
+
 export const useGetTask = (id: string) => {
   return useQuery<Task>({
     queryKey: ['task', id],
@@ -239,6 +271,8 @@ export const useGetTask = (id: string) => {
     enabled: !!id,
   });
 };
+
+export const useGetTaskQuery = useGetTask;
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -253,6 +287,8 @@ export const useCreateTask = () => {
     },
   });
 };
+
+export const useCreateTaskMutation = useCreateTask;
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
@@ -269,6 +305,8 @@ export const useUpdateTask = () => {
   });
 };
 
+export const useUpdateTaskMutation = useUpdateTask;
+
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -282,6 +320,8 @@ export const useDeleteTask = () => {
   });
 };
 
+export const useDeleteTaskMutation = useDeleteTask;
+
 // Dashboard API
 export const useGetWorkspaceStats = (workspaceId: string) => {
   return useQuery<DashboardStats>({
@@ -294,6 +334,8 @@ export const useGetWorkspaceStats = (workspaceId: string) => {
   });
 };
 
+export const useGetWorkspaceStatsQuery = useGetWorkspaceStats;
+
 export const useGetClientDistribution = (workspaceId: string) => {
   return useQuery<ClientDistribution>({
     queryKey: ['dashboard', 'client-distribution', workspaceId],
@@ -304,6 +346,8 @@ export const useGetClientDistribution = (workspaceId: string) => {
     enabled: !!workspaceId,
   });
 };
+
+export const useGetClientDistributionQuery = useGetClientDistribution;
 
 export const useGetRecentActivity = (workspaceId: string, limit: number = 10) => {
   return useQuery<RecentActivityItem[]>({
@@ -317,3 +361,5 @@ export const useGetRecentActivity = (workspaceId: string, limit: number = 10) =>
     enabled: !!workspaceId,
   });
 };
+
+export const useGetRecentActivityQuery = useGetRecentActivity;

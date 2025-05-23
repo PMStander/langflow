@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, Column
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -27,8 +28,13 @@ class TaskBase(SQLModel):
 class Task(TaskBase, table=True):  # type: ignore[call-arg]
     """Task model for database."""
     __tablename__ = "task"
-    
-    id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
+
+    id: UUIDstr = Field(
+        default_factory=uuid4,
+        primary_key=True,
+        unique=True,
+        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+    )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")
     assigned_to: UUIDstr | None = Field(default=None, foreign_key="user.id")
@@ -37,11 +43,11 @@ class Task(TaskBase, table=True):  # type: ignore[call-arg]
     opportunity_id: UUIDstr | None = Field(default=None, foreign_key="opportunity.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     workspace: "Workspace" = Relationship(back_populates="tasks")
-    creator: "User" = Relationship(back_populates="created_tasks", sa_relationship_kwargs={"foreign_keys": [created_by]})
-    assignee: "User" = Relationship(back_populates="assigned_tasks", sa_relationship_kwargs={"foreign_keys": [assigned_to]})
+    creator: "User" = Relationship(back_populates="created_tasks", sa_relationship_kwargs={"foreign_keys": "Task.created_by"})
+    assignee: "User" = Relationship(back_populates="assigned_tasks", sa_relationship_kwargs={"foreign_keys": "Task.assigned_to"})
     client: "Client" = Relationship(back_populates="tasks")
     invoice: "Invoice" = Relationship(back_populates="tasks")
     opportunity: "Opportunity" = Relationship(back_populates="tasks")

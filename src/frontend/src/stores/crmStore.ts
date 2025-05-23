@@ -7,10 +7,10 @@ interface CRMStoreState {
   activeInvoiceId: string | null;
   activeOpportunityId: string | null;
   activeTaskId: string | null;
-  
+
   // Active view
-  activeView: 'dashboard' | 'clients' | 'invoices' | 'opportunities' | 'tasks';
-  
+  activeView: 'dashboard' | 'clients' | 'invoices' | 'opportunities' | 'tasks' | 'reports';
+
   // Filters
   clientFilters: {
     status?: string;
@@ -33,13 +33,13 @@ interface CRMStoreState {
     assignedToMe?: boolean;
     searchTerm?: string;
   };
-  
+
   // Actions
   setActiveClientId: (id: string | null) => void;
   setActiveInvoiceId: (id: string | null) => void;
   setActiveOpportunityId: (id: string | null) => void;
   setActiveTaskId: (id: string | null) => void;
-  setActiveView: (view: 'dashboard' | 'clients' | 'invoices' | 'opportunities' | 'tasks') => void;
+  setActiveView: (view: 'dashboard' | 'clients' | 'invoices' | 'opportunities' | 'tasks' | 'reports') => void;
   setClientFilters: (filters: Partial<CRMStoreState['clientFilters']>) => void;
   setInvoiceFilters: (filters: Partial<CRMStoreState['invoiceFilters']>) => void;
   setOpportunityFilters: (filters: Partial<CRMStoreState['opportunityFilters']>) => void;
@@ -60,30 +60,30 @@ export const useCRMStore = create<CRMStoreState>()(
       invoiceFilters: {},
       opportunityFilters: {},
       taskFilters: {},
-      
+
       // Actions
       setActiveClientId: (id) => set({ activeClientId: id }),
       setActiveInvoiceId: (id) => set({ activeInvoiceId: id }),
       setActiveOpportunityId: (id) => set({ activeOpportunityId: id }),
       setActiveTaskId: (id) => set({ activeTaskId: id }),
       setActiveView: (view) => set({ activeView: view }),
-      setClientFilters: (filters) => set((state) => ({ 
-        clientFilters: { ...state.clientFilters, ...filters } 
+      setClientFilters: (filters) => set((state) => ({
+        clientFilters: { ...state.clientFilters, ...filters }
       })),
-      setInvoiceFilters: (filters) => set((state) => ({ 
-        invoiceFilters: { ...state.invoiceFilters, ...filters } 
+      setInvoiceFilters: (filters) => set((state) => ({
+        invoiceFilters: { ...state.invoiceFilters, ...filters }
       })),
-      setOpportunityFilters: (filters) => set((state) => ({ 
-        opportunityFilters: { ...state.opportunityFilters, ...filters } 
+      setOpportunityFilters: (filters) => set((state) => ({
+        opportunityFilters: { ...state.opportunityFilters, ...filters }
       })),
-      setTaskFilters: (filters) => set((state) => ({ 
-        taskFilters: { ...state.taskFilters, ...filters } 
+      setTaskFilters: (filters) => set((state) => ({
+        taskFilters: { ...state.taskFilters, ...filters }
       })),
-      resetFilters: () => set({ 
-        clientFilters: {}, 
-        invoiceFilters: {}, 
-        opportunityFilters: {}, 
-        taskFilters: {} 
+      resetFilters: () => set({
+        clientFilters: {},
+        invoiceFilters: {},
+        opportunityFilters: {},
+        taskFilters: {}
       }),
     }),
     {
