@@ -12,19 +12,19 @@ const useWorkspaceStore = create<WorkspaceStoreType>()(
       // Current workspace
       currentWorkspaceId: null,
       setCurrentWorkspaceId: (id) => set({ currentWorkspaceId: id }),
-      
+
       // All workspaces
       workspaces: [],
       setWorkspaces: (workspaces) => set({ workspaces }),
-      
+
       // Workspace members
       workspaceMembers: [],
       setWorkspaceMembers: (members) => set({ workspaceMembers: members }),
-      
+
       // Workspace to edit
       workspaceToEdit: null,
       setWorkspaceToEdit: (workspace) => set({ workspaceToEdit: workspace }),
-      
+
       // Reset store
       resetStore: () =>
         set({
@@ -43,4 +43,6 @@ const useWorkspaceStore = create<WorkspaceStoreType>()(
   )
 );
 
+// Export both as default and named export for compatibility
+export { useWorkspaceStore };
 export default useWorkspaceStore;

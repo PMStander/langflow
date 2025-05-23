@@ -91,9 +91,19 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
           flow.is_component === (flowType === "components"),
       ) === undefined
     ) {
-      setFlowType(flowType === "flows" ? "components" : "flows");
+      // Prevent infinite loop by only toggling if we haven't already checked both types
+      const newFlowType = flowType === "flows" ? "components" : "flows";
+      if (
+        flows?.find(
+          (flow) =>
+            flow.folder_id === (folderId ?? myCollectionId) &&
+            flow.is_component === (newFlowType === "components"),
+        ) !== undefined
+      ) {
+        setFlowType(newFlowType);
+      }
     }
-  }, [isEmptyFolder]);
+  }, [isEmptyFolder, flowType, flows, folderId, myCollectionId]);
 
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
