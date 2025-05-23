@@ -10,6 +10,7 @@ from langflow.services.database.models.crm.client import Client
 from langflow.services.database.models.crm.invoice import Invoice
 from langflow.services.database.models.crm.opportunity import Opportunity
 from langflow.services.database.models.crm.task import Task
+from langflow.api.v1.crm.cache import cached, invalidate_cache
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -41,6 +42,7 @@ async def check_workspace_access(session: DbSession, workspace_id: UUID, current
 
 
 @router.get("/workspace/{workspace_id}/stats", status_code=200)
+@cached(ttl_seconds=300)  # Cache for 5 minutes
 async def get_workspace_stats(
     *,
     session: DbSession,
@@ -147,6 +149,7 @@ async def get_workspace_stats(
 
 
 @router.get("/workspace/{workspace_id}/client-distribution", status_code=200)
+@cached(ttl_seconds=300)  # Cache for 5 minutes
 async def get_client_distribution(
     *,
     session: DbSession,
@@ -196,6 +199,7 @@ async def get_client_distribution(
 
 
 @router.get("/workspace/{workspace_id}/recent-activity", status_code=200)
+@cached(ttl_seconds=60)  # Cache for 1 minute (shorter time since this data changes more frequently)
 async def get_recent_activity(
     *,
     session: DbSession,

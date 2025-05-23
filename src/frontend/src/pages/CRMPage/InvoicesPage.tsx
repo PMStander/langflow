@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useGetInvoicesQuery, useCreateInvoiceMutation, useDeleteInvoiceMutation, useGetClientsQuery } from "@/controllers/API/queries/crm";
 import { Invoice, InvoiceCreate, InvoiceStatus } from "@/types/crm";
+import { extractItems, extractMetadata } from "@/types/crm/pagination";
 import CRMSidebarComponent from "@/components/core/crmSidebarComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   Dialog,
   DialogContent,
@@ -41,13 +43,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function InvoicesPage() {
   // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-  
+
   // Invoice filters from CRM store
   const { invoiceFilters, setInvoiceFilters } = useCRMStore((state) => ({
     invoiceFilters: state.invoiceFilters,
     setInvoiceFilters: state.setInvoiceFilters,
   }));
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState(invoiceFilters.searchTerm || "");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -58,19 +60,29 @@ export default function InvoicesPage() {
     description: "",
   });
 
-  // Fetch invoices
-  const { data: invoices, isLoading } = useGetInvoicesQuery(
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch invoices with pagination
+  const { data: invoicesResponse, isLoading } = useGetInvoicesQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
           status: invoiceFilters.status,
           client_id: invoiceFilters.clientId,
+          page: pageIndex,
+          limit: pageSize
         }
       : undefined,
     {
       enabled: !!currentWorkspaceId,
     }
   );
+
+  // Extract invoices and pagination metadata
+  const invoices = invoicesResponse ? extractItems(invoicesResponse) : [];
+  const paginationMetadata = invoicesResponse ? extractMetadata(invoicesResponse) : null;
 
   // Fetch clients for the dropdown
   const { data: clients } = useGetClientsQuery(
@@ -99,17 +111,25 @@ export default function InvoicesPage() {
   // Handle search
   const handleSearch = () => {
     setInvoiceFilters({ ...invoiceFilters, searchTerm });
+    // Reset pagination when search changes
+    setPageIndex(1);
+  };
+
+  // Handle pagination change
+  const handlePageChange = (newPageIndex: number, newPageSize: number) => {
+    setPageIndex(newPageIndex);
+    setPageSize(newPageSize);
   };
 
   // Handle create invoice
   const handleCreateInvoice = () => {
     if (!currentWorkspaceId || !newInvoice.invoice_number || !newInvoice.client_id) return;
-    
+
     createInvoice({
       ...newInvoice as InvoiceCreate,
       workspace_id: currentWorkspaceId,
     });
-    
+
     setIsCreateDialogOpen(false);
     setNewInvoice({
       invoice_number: "",
@@ -288,7 +308,7 @@ export default function InvoicesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -302,7 +322,7 @@ export default function InvoicesPage() {
                   All Clients
                 </DropdownMenuItem>
                 {clients?.map((client) => (
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     key={client.id}
                     onClick={() => setInvoiceFilters({ ...invoiceFilters, clientId: client.id })}
                   >
@@ -386,6 +406,19 @@ export default function InvoicesPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && paginationMetadata && (
+          <div className="mt-4">
+            <PaginatorComponent
+              pageIndex={paginationMetadata.page}
+              pageSize={paginationMetadata.size}
+              totalRowsCount={paginationMetadata.total}
+              paginate={handlePageChange}
+              pages={paginationMetadata.pages}
+            />
           </div>
         )}
       </div>

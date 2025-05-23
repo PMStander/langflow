@@ -1,9 +1,8 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select, or_
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.crm.opportunity import (
@@ -12,7 +11,13 @@ from langflow.services.database.models.crm.opportunity import (
     OpportunityRead,
     OpportunityUpdate,
 )
-from langflow.services.database.models.workspace import Workspace, WorkspaceMember
+from langflow.api.v1.crm.utils import (
+    check_workspace_access,
+    get_entity_access_filter,
+    update_entity_timestamps,
+    paginate_query,
+)
+from langflow.api.v1.crm.models import PaginatedResponse
 
 router = APIRouter(prefix="/opportunities", tags=["Opportunities"])
 
@@ -26,37 +31,21 @@ async def create_opportunity(
 ):
     """Create a new opportunity."""
     try:
-        # Check if user has access to the workspace
-        workspace = (
-            await session.exec(
-                select(Workspace)
-                .where(
-                    Workspace.id == opportunity.workspace_id,
-                    or_(
-                        Workspace.owner_id == current_user.id,
-                        Workspace.id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
-            )
-        ).first()
-        
-        if not workspace:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found or you don't have permission to create opportunities in it",
-            )
-        
+        # Check if user has access to the workspace with edit permission
+        await check_workspace_access(
+            session,
+            opportunity.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
         # Create the opportunity
         db_opportunity = Opportunity(
             **opportunity.model_dump(),
             created_by=current_user.id,
         )
+        # Update timestamps
+        update_entity_timestamps(db_opportunity, is_new=True)
         session.add(db_opportunity)
         await session.commit()
         await session.refresh(db_opportunity)
@@ -75,7 +64,7 @@ async def create_opportunity(
         ) from e
 
 
-@router.get("/", response_model=list[OpportunityRead], status_code=200)
+@router.get("/", response_model=PaginatedResponse[OpportunityRead], status_code=200)
 async def read_opportunities(
     *,
     session: DbSession,
@@ -83,39 +72,44 @@ async def read_opportunities(
     workspace_id: UUID | None = None,
     client_id: UUID | None = None,
     status: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    page: int | None = None,
 ):
-    """Get all opportunities the user has access to."""
+    """
+    Get all opportunities the user has access to.
+
+    Supports pagination with skip/limit or page/limit parameters.
+    Returns a paginated response with items and metadata.
+    """
     try:
         # Base query to get opportunities from workspaces the user has access to
         query = (
             select(Opportunity)
-            .where(
-                or_(
-                    Opportunity.workspace_id.in_(
-                        select(Workspace.id)
-                        .where(Workspace.owner_id == current_user.id)
-                    ),
-                    Opportunity.workspace_id.in_(
-                        select(WorkspaceMember.workspace_id)
-                        .where(WorkspaceMember.user_id == current_user.id)
-                    )
-                )
-            )
+            .where(get_entity_access_filter(Opportunity, current_user.id))
         )
-        
+
         # Add filters if provided
         if workspace_id:
             query = query.where(Opportunity.workspace_id == workspace_id)
-        
+
         if client_id:
             query = query.where(Opportunity.client_id == client_id)
-        
+
         if status:
             query = query.where(Opportunity.status == status)
-        
-        # Execute query
-        opportunities = (await session.exec(query)).all()
-        return opportunities
+
+        # Apply pagination and get items with metadata
+        opportunities, metadata = await paginate_query(
+            session=session,
+            query=query,
+            skip=skip,
+            limit=limit,
+            page=page
+        )
+
+        # Return paginated response
+        return PaginatedResponse(items=opportunities, metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -132,32 +126,23 @@ async def read_opportunity(
 ):
     """Get a specific opportunity."""
     try:
-        # Check if user has access to the opportunity's workspace
+        # Check if opportunity exists and user has access to it
         opportunity = (
             await session.exec(
                 select(Opportunity)
                 .where(
                     Opportunity.id == opportunity_id,
-                    or_(
-                        Opportunity.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Opportunity.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(WorkspaceMember.user_id == current_user.id)
-                        )
-                    )
+                    get_entity_access_filter(Opportunity, current_user.id)
                 )
             )
         ).first()
-        
+
         if not opportunity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Opportunity not found or access denied",
             )
-        
+
         return opportunity
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -178,44 +163,32 @@ async def update_opportunity(
 ):
     """Update an opportunity."""
     try:
-        # Check if user has access to update the opportunity
+        # Check if opportunity exists
         db_opportunity = (
             await session.exec(
                 select(Opportunity)
-                .where(
-                    Opportunity.id == opportunity_id,
-                    or_(
-                        Opportunity.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Opportunity.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role.in_(["owner", "editor"])
-                            )
-                        )
-                    )
-                )
+                .where(Opportunity.id == opportunity_id)
             )
         ).first()
-        
+
         if not db_opportunity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Opportunity not found or you don't have permission to update it",
+                detail="Opportunity not found",
             )
-        
-        # Update opportunity fields
+
+        # Check if user has edit permission for the opportunity's workspace
+        await check_workspace_access(
+            session,
+            db_opportunity.workspace_id,
+            current_user,
+            require_edit_permission=True
+        )
+
+        # Update opportunity fields and timestamps
         opportunity_data = opportunity.model_dump(exclude_unset=True)
-        for key, value in opportunity_data.items():
-            setattr(db_opportunity, key, value)
-        
-        # Update the updated_at timestamp
-        from datetime import datetime, timezone
-        db_opportunity.updated_at = datetime.now(timezone.utc)
-        
+        update_entity_timestamps(db_opportunity, update_data=opportunity_data)
+
         await session.commit()
         await session.refresh(db_opportunity)
         return db_opportunity
@@ -238,35 +211,28 @@ async def delete_opportunity(
 ):
     """Delete an opportunity."""
     try:
-        # Check if user has access to delete the opportunity
+        # Check if opportunity exists
         db_opportunity = (
             await session.exec(
                 select(Opportunity)
-                .where(
-                    Opportunity.id == opportunity_id,
-                    or_(
-                        Opportunity.workspace_id.in_(
-                            select(Workspace.id)
-                            .where(Workspace.owner_id == current_user.id)
-                        ),
-                        Opportunity.workspace_id.in_(
-                            select(WorkspaceMember.workspace_id)
-                            .where(
-                                WorkspaceMember.user_id == current_user.id,
-                                WorkspaceMember.role == "owner"
-                            )
-                        )
-                    )
-                )
+                .where(Opportunity.id == opportunity_id)
             )
         ).first()
-        
+
         if not db_opportunity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Opportunity not found or you don't have permission to delete it",
+                detail="Opportunity not found",
             )
-        
+
+        # Check if user has owner permission for the opportunity's workspace
+        await check_workspace_access(
+            session,
+            db_opportunity.workspace_id,
+            current_user,
+            require_owner_permission=True
+        )
+
         await session.delete(db_opportunity)
         await session.commit()
         return None

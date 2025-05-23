@@ -14,7 +14,10 @@ from langflow.services.database.models.crm.invoice import (
 from langflow.api.v1.crm.utils import (
     check_workspace_access,
     get_entity_access_filter,
+    update_entity_timestamps,
+    paginate_query,
 )
+from langflow.api.v1.crm.models import PaginatedResponse
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
@@ -41,6 +44,8 @@ async def create_invoice(
             **invoice.model_dump(),
             created_by=current_user.id,
         )
+        # Update timestamps
+        update_entity_timestamps(db_invoice, is_new=True)
         session.add(db_invoice)
         await session.commit()
         await session.refresh(db_invoice)
@@ -59,7 +64,7 @@ async def create_invoice(
         ) from e
 
 
-@router.get("/", response_model=list[InvoiceRead], status_code=200)
+@router.get("/", response_model=PaginatedResponse[InvoiceRead], status_code=200)
 async def read_invoices(
     *,
     session: DbSession,
@@ -67,8 +72,16 @@ async def read_invoices(
     workspace_id: UUID | None = None,
     client_id: UUID | None = None,
     status: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    page: int | None = None,
 ):
-    """Get all invoices the user has access to."""
+    """
+    Get all invoices the user has access to.
+
+    Supports pagination with skip/limit or page/limit parameters.
+    Returns a paginated response with items and metadata.
+    """
     try:
         # Base query to get invoices from workspaces the user has access to
         query = (
@@ -86,9 +99,17 @@ async def read_invoices(
         if status:
             query = query.where(Invoice.status == status)
 
-        # Execute query
-        invoices = (await session.exec(query)).all()
-        return invoices
+        # Apply pagination and get items with metadata
+        invoices, metadata = await paginate_query(
+            session=session,
+            query=query,
+            skip=skip,
+            limit=limit,
+            page=page
+        )
+
+        # Return paginated response
+        return PaginatedResponse(items=invoices, metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -164,14 +185,9 @@ async def update_invoice(
             require_edit_permission=True
         )
 
-        # Update invoice fields
+        # Update invoice fields and timestamps
         invoice_data = invoice.model_dump(exclude_unset=True)
-        for key, value in invoice_data.items():
-            setattr(db_invoice, key, value)
-
-        # Update the updated_at timestamp
-        from datetime import datetime, timezone
-        db_invoice.updated_at = datetime.now(timezone.utc)
+        update_entity_timestamps(db_invoice, update_data=invoice_data)
 
         await session.commit()
         await session.refresh(db_invoice)

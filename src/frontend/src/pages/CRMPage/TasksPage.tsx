@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { 
-  useGetTasksQuery, 
-  useCreateTaskMutation, 
-  useDeleteTaskMutation, 
+import {
+  useGetTasksQuery,
+  useCreateTaskMutation,
+  useDeleteTaskMutation,
   useGetClientsQuery,
   useGetInvoicesQuery,
   useGetOpportunitiesQuery
 } from "@/controllers/API/queries/crm";
 import { Task, TaskCreate, TaskStatus, TaskPriority } from "@/types/crm";
+import { extractItems, extractMetadata } from "@/types/crm/pagination";
 import CRMSidebarComponent from "@/components/core/crmSidebarComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   Dialog,
   DialogContent,
@@ -48,13 +50,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function TasksPage() {
   // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-  
+
   // Task filters from CRM store
   const { taskFilters, setTaskFilters } = useCRMStore((state) => ({
     taskFilters: state.taskFilters,
     setTaskFilters: state.setTaskFilters,
   }));
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState(taskFilters.searchTerm || "");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -65,8 +67,12 @@ export default function TasksPage() {
     priority: "medium",
   });
 
-  // Fetch tasks
-  const { data: tasks, isLoading } = useGetTasksQuery(
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch tasks with pagination
+  const { data: tasksResponse, isLoading } = useGetTasksQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
@@ -75,6 +81,8 @@ export default function TasksPage() {
           client_id: taskFilters.clientId,
           invoice_id: taskFilters.invoiceId,
           opportunity_id: taskFilters.opportunityId,
+          page: pageIndex,
+          limit: pageSize
         }
       : undefined,
     {
@@ -82,17 +90,21 @@ export default function TasksPage() {
     }
   );
 
+  // Extract tasks and pagination metadata
+  const tasks = tasksResponse ? extractItems(tasksResponse) : [];
+  const paginationMetadata = tasksResponse ? extractMetadata(tasksResponse) : null;
+
   // Fetch related entities for dropdowns
   const { data: clients } = useGetClientsQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
   );
-  
+
   const { data: invoices } = useGetInvoicesQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
   );
-  
+
   const { data: opportunities } = useGetOpportunitiesQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
@@ -113,17 +125,25 @@ export default function TasksPage() {
   // Handle search
   const handleSearch = () => {
     setTaskFilters({ ...taskFilters, searchTerm });
+    // Reset pagination when search changes
+    setPageIndex(1);
+  };
+
+  // Handle pagination change
+  const handlePageChange = (newPageIndex: number, newPageSize: number) => {
+    setPageIndex(newPageIndex);
+    setPageSize(newPageSize);
   };
 
   // Handle create task
   const handleCreateTask = () => {
     if (!currentWorkspaceId || !newTask.title) return;
-    
+
     createTask({
       ...newTask as TaskCreate,
       workspace_id: currentWorkspaceId,
     });
-    
+
     setIsCreateDialogOpen(false);
     setNewTask({
       title: "",
@@ -366,7 +386,7 @@ export default function TasksPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -481,6 +501,19 @@ export default function TasksPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && paginationMetadata && (
+          <div className="mt-4">
+            <PaginatorComponent
+              pageIndex={paginationMetadata.page}
+              pageSize={paginationMetadata.size}
+              totalRowsCount={paginationMetadata.total}
+              paginate={handlePageChange}
+              pages={paginationMetadata.pages}
+            />
           </div>
         )}
       </div>

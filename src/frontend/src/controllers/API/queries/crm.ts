@@ -16,16 +16,45 @@ import {
   ClientDistribution,
   RecentActivityItem
 } from "../../../types/crm";
+import {
+  PaginatedClients,
+  PaginatedInvoices,
+  PaginatedOpportunities,
+  PaginatedTasks,
+  PaginationParams,
+  extractItems,
+  isPaginated
+} from "../../../types/crm/pagination";
 import { api as apiClient } from "../api";
 
 // Client API
-export const useGetClients = (params?: { workspace_id?: string; status?: string }) => {
-  return useQuery<Client[]>({
+export const useGetClients = (params?: { workspace_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedClients | Client[]>({
     queryKey: ['clients', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/clients', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -93,13 +122,33 @@ export const useDeleteClient = () => {
 export const useDeleteClientMutation = useDeleteClient;
 
 // Invoice API
-export const useGetInvoices = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
-  return useQuery<Invoice[]>({
+export const useGetInvoices = (params?: { workspace_id?: string; client_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedInvoices | Invoice[]>({
     queryKey: ['invoices', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/invoices', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -167,13 +216,33 @@ export const useDeleteInvoice = () => {
 export const useDeleteInvoiceMutation = useDeleteInvoice;
 
 // Opportunity API
-export const useGetOpportunities = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
-  return useQuery<Opportunity[]>({
+export const useGetOpportunities = (params?: { workspace_id?: string; client_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedOpportunities | Opportunity[]>({
     queryKey: ['opportunities', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/opportunities', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -249,13 +318,33 @@ export const useGetTasks = (params?: {
   assigned_to?: string;
   status?: string;
   priority?: string;
-}) => {
-  return useQuery<Task[]>({
+} & PaginationParams) => {
+  return useQuery<PaginatedTasks | Task[]>({
     queryKey: ['tasks', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/tasks', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 

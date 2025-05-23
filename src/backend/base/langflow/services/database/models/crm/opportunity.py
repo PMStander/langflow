@@ -19,9 +19,9 @@ class OpportunityBase(SQLModel):
     """Base model for Opportunity."""
     name: str = Field(index=True)
     value: float | None = Field(default=None)
-    status: str = Field(default="new")  # new, qualified, proposal, negotiation, won, lost
+    status: str = Field(default="new", index=True)  # new, qualified, proposal, negotiation, won, lost
     description: str | None = Field(default=None, sa_column=Column(Text))
-    expected_close_date: datetime | None = Field(default=None)
+    expected_close_date: datetime | None = Field(default=None, index=True)
 
 
 class Opportunity(OpportunityBase, table=True):  # type: ignore[call-arg]
@@ -30,9 +30,7 @@ class Opportunity(OpportunityBase, table=True):  # type: ignore[call-arg]
 
     id: UUIDstr = Field(
         default_factory=uuid4,
-        primary_key=True,
-        unique=True,
-        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+        sa_column=Column(PostgresUUID(as_uuid=True), primary_key=True, unique=True)
     )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     client_id: UUIDstr = Field(index=True, foreign_key="client.id")

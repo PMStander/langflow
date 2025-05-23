@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useGetClientsQuery, useCreateClientMutation, useDeleteClientMutation } from "@/controllers/API/queries/crm";
 import { Client, ClientCreate, ClientStatus } from "@/types/crm";
+import { extractItems, extractMetadata } from "@/types/crm/pagination";
 import CRMSidebarComponent from "@/components/core/crmSidebarComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   Dialog,
   DialogContent,
@@ -59,18 +61,28 @@ export default function ClientsPage() {
     status: "lead",
   });
 
-  // Fetch clients
-  const { data: clients, isLoading } = useGetClientsQuery(
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch clients with pagination
+  const { data: clientsResponse, isLoading } = useGetClientsQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
           status: clientFilters.status,
+          page: pageIndex,
+          limit: pageSize
         }
       : undefined,
     {
       enabled: !!currentWorkspaceId,
     }
   );
+
+  // Extract clients and pagination metadata
+  const clients = clientsResponse ? extractItems(clientsResponse) : [];
+  const paginationMetadata = clientsResponse ? extractMetadata(clientsResponse) : null;
 
   // Mutations
   const { mutate: createClient } = useCreateClientMutation();
@@ -93,6 +105,14 @@ export default function ClientsPage() {
   // Handle status filter
   const handleStatusFilter = (status?: string) => {
     setClientFilters({ status: status as ClientStatus | undefined });
+    // Reset pagination when filter changes
+    setPageIndex(1);
+  };
+
+  // Handle pagination change
+  const handlePageChange = (newPageIndex: number, newPageSize: number) => {
+    setPageIndex(newPageIndex);
+    setPageSize(newPageSize);
   };
 
   // Handle create client
@@ -356,6 +376,19 @@ export default function ClientsPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && paginationMetadata && (
+          <div className="mt-4">
+            <PaginatorComponent
+              pageIndex={paginationMetadata.page}
+              pageSize={paginationMetadata.size}
+              totalRowsCount={paginationMetadata.total}
+              paginate={handlePageChange}
+              pages={paginationMetadata.pages}
+            />
           </div>
         )}
       </div>
