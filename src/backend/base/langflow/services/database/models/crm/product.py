@@ -1,16 +1,18 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, List, Dict, Any
-from uuid import UUID, uuid4
+from typing import TYPE_CHECKING, List, Dict, Any
+from uuid import uuid4
 
 from sqlalchemy import Text, Column, JSON
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.crm.product_category import ProductCategoryLink
+from langflow.services.database.models.crm.product_attribute import ProductAttributeLink
 
 if TYPE_CHECKING:
+    from langflow.services.database.models.workspace.model import Workspace
     from langflow.services.database.models.user import User
-    from langflow.services.database.models.workspace import Workspace
     from langflow.services.database.models.crm.product_category import ProductCategory
     from langflow.services.database.models.crm.product_attribute import ProductAttribute
     from langflow.services.database.models.crm.product_variation import ProductVariation
@@ -80,13 +82,13 @@ class Product(ProductBase, table=True):  # type: ignore[call-arg]
     # Many-to-many relationship with categories
     categories: List["ProductCategory"] = Relationship(
         back_populates="products",
-        link_model="ProductCategoryLink"
+        link_model=ProductCategoryLink
     )
 
     # Many-to-many relationship with attributes
     attributes: List["ProductAttribute"] = Relationship(
         back_populates="products",
-        link_model="ProductAttributeLink"
+        link_model=ProductAttributeLink
     )
 
     # One-to-many relationship with variations

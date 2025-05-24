@@ -10,7 +10,7 @@ import {
   PORT,
   PROXY_TARGET,
 } from "./src/customization/config-constants";
-import { Plugin } from "vite";
+
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -36,14 +36,26 @@ export default defineConfig(({ mode }) => {
       ws: true,
       timeout: 120000, // 2 minutes timeout
       proxyTimeout: 120000, // 2 minutes proxy timeout
-      configure: (proxy, _options) => {
-        proxy.on('error', (err, _req, _res) => {
+      configure: (proxy: any, _options: any) => {
+        proxy.on('error', (err: any, _req: any, res: any) => {
           console.log('proxy error', err);
+          // Handle connection errors gracefully
+          if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+            console.log(`Backend connection failed. Please ensure the backend is running on ${target}`);
+            if (res && !res.headersSent) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                error: 'Backend service unavailable',
+                message: `Cannot connect to backend at ${target}. Please start the backend server.`,
+                code: err.code
+              }));
+            }
+          }
         });
-        proxy.on('proxyReq', (proxyReq, req, _res) => {
+        proxy.on('proxyReq', (_proxyReq: any, req: any, _res: any) => {
           console.log('Sending Request to the Target:', req.method, req.url);
         });
-        proxy.on('proxyRes', (proxyRes, req, _res) => {
+        proxy.on('proxyRes', (proxyRes: any, req: any, _res: any) => {
           console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
         });
       },
