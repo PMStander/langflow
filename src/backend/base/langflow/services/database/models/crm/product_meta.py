@@ -29,9 +29,9 @@ class ProductMeta(ProductMetaBase, table=True):  # type: ignore[call-arg]
     product_id: UUIDstr = Field(index=True, foreign_key="product.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
-    product: "Product" = Relationship(back_populates="meta_data")
+
+    # Relationships (temporarily disabled)
+    # product: "Product" = Relationship(back_populates="meta_data")
 
 
 class ProductMetaCreate(ProductMetaBase):

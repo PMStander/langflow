@@ -47,14 +47,14 @@ class ProductCategory(ProductCategoryBase, table=True):  # type: ignore[call-arg
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     workspace: "Workspace" = Relationship(back_populates="product_categories")
     creator: "User" = Relationship(
-        back_populates="created_product_categories", 
+        back_populates="created_product_categories",
         sa_relationship_kwargs={"foreign_keys": "ProductCategory.created_by"}
     )
-    
+
     # Self-referential relationship for parent-child categories
     parent: Optional["ProductCategory"] = Relationship(
         back_populates="children",
@@ -63,12 +63,12 @@ class ProductCategory(ProductCategoryBase, table=True):  # type: ignore[call-arg
     children: List["ProductCategory"] = Relationship(
         back_populates="parent"
     )
-    
-    # Many-to-many relationship with products
-    products: List["Product"] = Relationship(
-        back_populates="categories",
-        link_model=ProductCategoryLink
-    )
+
+    # Many-to-many relationship with products (temporarily disabled)
+    # products: List["Product"] = Relationship(
+    #     back_populates="categories",
+    #     link_model=ProductCategoryLink
+    # )
 
 
 class ProductCategoryCreate(ProductCategoryBase):

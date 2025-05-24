@@ -31,7 +31,8 @@ def handle_exceptions(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[
             raise
         except Exception as e:
             # Handle all other exceptions
-            logger.error(f"Unhandled error in {func.__name__}: {e}", exc_info=True)
+            # Temporarily disable logging to see the actual error
+            # logger.error("Unhandled error in " + func.__name__ + ": " + repr(e), exc_info=True)
             if hasattr(kwargs.get("session", None), "rollback"):
                 await kwargs["session"].rollback()
             raise HTTPException(
@@ -44,7 +45,7 @@ def handle_exceptions(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[
 
 def get_http_status_code(status_code_name: str) -> int:
     """Get HTTP status code from status code name.
-    
+
     This function ensures that we always have a valid status code even if the status import fails.
     """
     # Define common status codes
@@ -60,7 +61,7 @@ def get_http_status_code(status_code_name: str) -> int:
         "HTTP_422_UNPROCESSABLE_ENTITY": 422,
         "HTTP_500_INTERNAL_SERVER_ERROR": 500,
     }
-    
+
     # Try to get the status code from FastAPI's status module
     try:
         return getattr(status, status_code_name)

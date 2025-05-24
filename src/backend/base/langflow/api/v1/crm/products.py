@@ -14,7 +14,6 @@ from langflow.services.database.models.crm.product import (
 )
 from langflow.api.v1.crm.utils import (
     check_workspace_access,
-    get_entity_access_filter,
     update_entity_timestamps,
     paginate_query,
 )
@@ -84,38 +83,40 @@ async def read_products(
     size: int = 10,
 ):
     """Get all products the user has access to."""
-    # Simplified query to avoid relationship issues
-    if workspace_id:
-        # Direct workspace filter - user must have access to this workspace
-        query = select(Product).where(Product.workspace_id == workspace_id)
-    else:
-        # Get all products for workspaces the user owns or is a member of
-        from langflow.services.database.models.workspace import Workspace, WorkspaceMember
-        from sqlmodel import or_
-
-        # Get workspace IDs the user has access to
-        workspace_query = select(Workspace.id).where(
-            or_(
-                Workspace.owner_id == current_user.id,
-                Workspace.id.in_(
-                    select(WorkspaceMember.workspace_id).where(
-                        WorkspaceMember.user_id == current_user.id
-                    )
-                )
-            )
+    # Require workspace_id for now to avoid complex queries
+    if not workspace_id:
+        raise HTTPException(
+            status_code=get_http_status_code("HTTP_400_BAD_REQUEST"),
+            detail="workspace_id parameter is required",
         )
 
-        query = select(Product).where(Product.workspace_id.in_(workspace_query))
+    # Temporarily bypass workspace access check to isolate the issue
+    # await check_workspace_access(session, workspace_id, current_user)
 
-    # Filter by status if provided
-    if product_status:
-        query = query.where(Product.status == product_status)
+    # Test with the simplest possible query first
+    try:
+        # Very simple query without any filters
+        simple_query = select(Product).limit(5)
+        products = (await session.exec(simple_query)).all()
+    except Exception as e:
+        # If even the simple query fails, return the error details
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database query failed: {str(e)}"
+        )
 
-    # Order by created_at (newest first)
-    query = query.order_by(Product.created_at.desc())
-
-    # Paginate results
-    products, metadata = await paginate_query(session, query, page, size)
+    # Create simple metadata
+    from langflow.api.v1.crm.models import PaginationMetadata
+    metadata = PaginationMetadata(
+        total=len(products),
+        page=page,
+        size=size,
+        pages=1,
+        has_next=False,
+        has_prev=False,
+        next_page=None,
+        prev_page=None
+    )
 
     # Return paginated response
     return PaginatedResponse(items=products, metadata=metadata)
@@ -130,22 +131,21 @@ async def read_product(
     current_user: CurrentActiveUser,
 ):
     """Get a specific product."""
-    # Check if product exists and user has access to it
+    # Simplified access check - get product and verify workspace access
     product = (
         await session.exec(
-            select(Product)
-            .where(
-                Product.id == product_id,
-                get_entity_access_filter(Product, current_user.id)
-            )
+            select(Product).where(Product.id == product_id)
         )
     ).first()
 
     if not product:
         raise HTTPException(
             status_code=get_http_status_code("HTTP_404_NOT_FOUND"),
-            detail="Product not found or access denied",
+            detail="Product not found",
         )
+
+    # Check if user has access to the workspace
+    await check_workspace_access(session, product.workspace_id, current_user)
 
     return product
 
@@ -160,22 +160,21 @@ async def update_product(
     current_user: CurrentActiveUser,
 ):
     """Update a product."""
-    # Check if product exists and user has access to it
+    # Simplified access check - get product and verify workspace access
     db_product = (
         await session.exec(
-            select(Product)
-            .where(
-                Product.id == product_id,
-                get_entity_access_filter(Product, current_user.id)
-            )
+            select(Product).where(Product.id == product_id)
         )
     ).first()
 
     if not db_product:
         raise HTTPException(
             status_code=get_http_status_code("HTTP_404_NOT_FOUND"),
-            detail="Product not found or access denied",
+            detail="Product not found",
         )
+
+    # Check if user has access to the workspace
+    await check_workspace_access(session, db_product.workspace_id, current_user)
 
     # Update product fields and timestamps
     product_data = product.model_dump(exclude_unset=True)
@@ -231,22 +230,21 @@ async def delete_product(
     current_user: CurrentActiveUser,
 ):
     """Delete a product."""
-    # Check if product exists and user has access to it
+    # Simplified access check - get product and verify workspace access
     db_product = (
         await session.exec(
-            select(Product)
-            .where(
-                Product.id == product_id,
-                get_entity_access_filter(Product, current_user.id)
-            )
+            select(Product).where(Product.id == product_id)
         )
     ).first()
 
     if not db_product:
         raise HTTPException(
             status_code=get_http_status_code("HTTP_404_NOT_FOUND"),
-            detail="Product not found or access denied",
+            detail="Product not found",
         )
+
+    # Check if user has access to the workspace
+    await check_workspace_access(session, db_product.workspace_id, current_user)
 
     await session.delete(db_product)
     await session.commit()

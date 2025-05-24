@@ -72,12 +72,12 @@ class Product(ProductBase, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    # Basic relationships only (complex relationships temporarily disabled)
-    # workspace: "Workspace" = Relationship(back_populates="products")
-    # creator: "User" = Relationship(
-    #     back_populates="created_products",
-    #     sa_relationship_kwargs={"foreign_keys": "Product.created_by"}
-    # )
+    # Essential relationships only (complex many-to-many disabled for now)
+    workspace: "Workspace" = Relationship(back_populates="products")
+    creator: "User" = Relationship(
+        back_populates="created_products",
+        sa_relationship_kwargs={"foreign_keys": "Product.created_by"}
+    )
 
     # Many-to-many relationship with categories (temporarily disabled)
     # categories: List["ProductCategory"] = Relationship(

@@ -54,9 +54,9 @@ class ProductVariation(ProductVariationBase, table=True):  # type: ignore[call-a
     product_id: UUIDstr = Field(index=True, foreign_key="product.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
-    product: "Product" = Relationship(back_populates="variations")
+
+    # Relationships (temporarily disabled)
+    # product: "Product" = Relationship(back_populates="variations")
 
 
 class ProductVariationCreate(ProductVariationBase):

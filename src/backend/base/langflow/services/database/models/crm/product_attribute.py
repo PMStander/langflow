@@ -47,20 +47,20 @@ class ProductAttribute(ProductAttributeBase, table=True):  # type: ignore[call-a
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     workspace: "Workspace" = Relationship(back_populates="product_attributes")
     creator: "User" = Relationship(
-        back_populates="created_product_attributes", 
+        back_populates="created_product_attributes",
         sa_relationship_kwargs={"foreign_keys": "ProductAttribute.created_by"}
     )
-    
-    # Many-to-many relationship with products
-    products: List["Product"] = Relationship(
-        back_populates="attributes",
-        link_model=ProductAttributeLink
-    )
-    
+
+    # Many-to-many relationship with products (temporarily disabled)
+    # products: List["Product"] = Relationship(
+    #     back_populates="attributes",
+    #     link_model=ProductAttributeLink
+    # )
+
     # One-to-many relationship with attribute terms
     terms: List["ProductAttributeTerm"] = Relationship(
         back_populates="attribute",
@@ -110,7 +110,7 @@ class ProductAttributeTerm(ProductAttributeTermBase, table=True):  # type: ignor
     attribute_id: UUIDstr = Field(index=True, foreign_key="product_attribute.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Relationships
     attribute: "ProductAttribute" = Relationship(back_populates="terms")
 

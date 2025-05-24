@@ -36,11 +36,11 @@ class ProductReview(ProductReviewBase, table=True):  # type: ignore[call-arg]
     created_by: UUIDstr | None = Field(default=None, index=True, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    # Relationships
-    product: "Product" = Relationship(back_populates="reviews")
+
+    # Relationships (temporarily disabled)
+    # product: "Product" = Relationship(back_populates="reviews")
     creator: Optional["User"] = Relationship(
-        back_populates="created_product_reviews", 
+        back_populates="created_product_reviews",
         sa_relationship_kwargs={"foreign_keys": "ProductReview.created_by"}
     )
 
