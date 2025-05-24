@@ -79,7 +79,7 @@ async def read_products(
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
-    status: str | None = None,
+    product_status: str | None = None,
     page: int = 1,
     size: int = 10,
 ):
@@ -92,8 +92,8 @@ async def read_products(
         query = query.where(Product.workspace_id == workspace_id)
 
     # Filter by status if provided
-    if status:
-        query = query.where(Product.status == status)
+    if product_status:
+        query = query.where(Product.status == product_status)
 
     # Order by created_at (newest first)
     query = query.order_by(Product.created_at.desc())

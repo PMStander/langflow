@@ -77,7 +77,7 @@ async def read_clients(
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
-    status: str | None = None,
+    client_status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     page: int | None = None,
@@ -99,8 +99,8 @@ async def read_clients(
         if workspace_id:
             query = query.where(Client.workspace_id == workspace_id)
 
-        if status:
-            query = query.where(Client.status == status)
+        if client_status:
+            query = query.where(Client.status == client_status)
 
         # Apply pagination and get items with metadata
         clients, metadata = await paginate_query(
