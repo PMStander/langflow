@@ -31,6 +31,7 @@ export const URLs = {
   AI_ASSISTANT: `ai-assistant`,
   WORKSPACES: `workspaces`,
   WORKSPACE_MEMBERS: `workspaces/{workspace_id}/members`,
+  BOOKS: `books`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

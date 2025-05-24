@@ -36,6 +36,7 @@ import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import { CRMRoutes } from "./routes/crmRoutes";
+import { BookCreatorRoutes } from "./routes/bookCreatorRoutes";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -145,6 +146,7 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="workspaces" element={<WorkspacePage />} />
                 {CRMRoutes()}
+                {BookCreatorRoutes()}
                 <Route
                   path="admin"
                   element={
