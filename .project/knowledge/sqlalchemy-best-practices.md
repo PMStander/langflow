@@ -29,7 +29,7 @@ workspace: "Workspace" = Relationship(back_populates="clients")
 ```python
 # When multiple foreign keys point to the same table
 creator: "User" = Relationship(
-    back_populates="created_clients", 
+    back_populates="created_clients",
     sa_relationship_kwargs={"foreign_keys": "Client.created_by"}
 )
 ```
@@ -38,7 +38,7 @@ creator: "User" = Relationship(
 ```python
 # Relationship with cascade delete
 tasks: list["Task"] = Relationship(
-    back_populates="client", 
+    back_populates="client",
     sa_relationship_kwargs={"cascade": "delete"}
 )
 ```
@@ -68,7 +68,7 @@ alembic upgrade head
 def upgrade() -> None:
     conn = op.get_bind()
     inspector = sa.inspect(conn)
-    
+
     # Check if constraint exists before dropping
     with op.batch_alter_table('table_name', schema=None) as batch_op:
         constraints = inspector.get_unique_constraints('table_name')
@@ -151,7 +151,7 @@ id: UUIDstr = Field(
    ```python
    # WRONG
    creator: "User" = Relationship(sa_relationship_kwargs={"foreign_keys": [created_by]})
-   
+
    # CORRECT
    creator: "User" = Relationship(sa_relationship_kwargs={"foreign_keys": "Model.created_by"})
    ```
@@ -160,7 +160,7 @@ id: UUIDstr = Field(
    ```python
    # WRONG
    batch_op.drop_constraint('constraint_name', type_='unique')
-   
+
    # CORRECT
    constraints = inspector.get_unique_constraints('table_name')
    constraint_names = [constraint['name'] for constraint in constraints]
@@ -172,7 +172,7 @@ id: UUIDstr = Field(
    ```python
    # WRONG
    from .user import User
-   
+
    # CORRECT
    if TYPE_CHECKING:
        from .user import User
@@ -182,7 +182,7 @@ id: UUIDstr = Field(
    ```python
    # WRONG (generic)
    id: UUID = Field(default_factory=uuid4, primary_key=True)
-   
+
    # CORRECT (PostgreSQL-specific)
    id: UUIDstr = Field(
        default_factory=uuid4,
@@ -195,9 +195,18 @@ id: UUIDstr = Field(
    ```python
    # WRONG
    user_id: UUIDstr = Field(foreign_key="user.id")
-   
+
    # CORRECT
    user_id: UUIDstr = Field(index=True, foreign_key="user.id")
+   ```
+
+6. **SQLAlchemy version compatibility issues with `with_only_columns()`**:
+   ```python
+   # WRONG (SQLAlchemy 2.0+ compatibility issue)
+   count_query = query.with_only_columns([func.count()])
+
+   # CORRECT (SQLAlchemy 2.0+ compatible)
+   count_query = query.with_only_columns(func.count())
    ```
 
 ## Lessons Learned from Recent Issues
@@ -207,5 +216,16 @@ The recent foreign key relationship issues in the CRM models were caused by:
 1. Using field objects directly in the `foreign_keys` parameter instead of string references
 2. Not properly handling constraint existence checks in migrations
 3. Inconsistent relationship definitions across related models
+4. SQLAlchemy version compatibility issues with `with_only_columns()` method
+
+### Recent SQLAlchemy Version Compatibility Fix (2025-01-27)
+
+**Issue**: The `with_only_columns()` method in SQLAlchemy 2.0+ no longer accepts a list of columns as an argument. Instead, columns should be passed as individual positional arguments.
+
+**Error**: `The "entities" argument to Select.with_only_columns(), when referring to a sequence of items, is now passed as a series of positional elements, rather than as a list.`
+
+**Solution**: Change from `query.with_only_columns([func.count()])` to `query.with_only_columns(func.count())`
+
+**Prevention**: Always check SQLAlchemy documentation for version-specific changes when upgrading, and test pagination utilities thoroughly after SQLAlchemy version updates.
 
 By following the best practices outlined in this document, we can avoid these issues in the future and ensure a more robust database implementation.

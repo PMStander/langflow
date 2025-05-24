@@ -20,9 +20,9 @@ class TaskBase(SQLModel):
     """Base model for Task."""
     title: str = Field(index=True)
     description: str | None = Field(default=None, sa_column=Column(Text))
-    status: str = Field(default="open")  # open, in_progress, completed, cancelled
-    priority: str = Field(default="medium")  # low, medium, high
-    due_date: datetime | None = Field(default=None)
+    status: str = Field(default="open", index=True)  # open, in_progress, completed, cancelled
+    priority: str = Field(default="medium", index=True)  # low, medium, high
+    due_date: datetime | None = Field(default=None, index=True)
 
 
 class Task(TaskBase, table=True):  # type: ignore[call-arg]
@@ -31,9 +31,7 @@ class Task(TaskBase, table=True):  # type: ignore[call-arg]
 
     id: UUIDstr = Field(
         default_factory=uuid4,
-        primary_key=True,
-        unique=True,
-        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+        sa_column=Column(PostgresUUID(as_uuid=True), primary_key=True, unique=True)
     )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")

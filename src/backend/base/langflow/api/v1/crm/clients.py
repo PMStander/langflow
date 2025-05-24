@@ -14,12 +14,16 @@ from langflow.services.database.models.crm.client import (
 from langflow.api.v1.crm.utils import (
     check_workspace_access,
     get_entity_access_filter,
+    update_entity_timestamps,
+    paginate_query,
 )
+from langflow.api.v1.crm.models import PaginatedResponse
+from langflow.api.v1.crm.cache import invalidate_cache
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
-@router.post("/", response_model=ClientRead, status_code=201)
+@router.post("", response_model=ClientRead, status_code=201)
 async def create_client(
     *,
     session: DbSession,
@@ -41,9 +45,17 @@ async def create_client(
             **client.model_dump(),
             created_by=current_user.id,
         )
+        # Update timestamps
+        update_entity_timestamps(db_client, is_new=True)
         session.add(db_client)
         await session.commit()
         await session.refresh(db_client)
+
+        # Invalidate dashboard cache since client data has changed
+        invalidate_cache("get_workspace_stats")
+        invalidate_cache("get_client_distribution")
+        invalidate_cache("get_recent_activity")
+
         return db_client
     except IntegrityError as e:
         await session.rollback()
@@ -59,15 +71,23 @@ async def create_client(
         ) from e
 
 
-@router.get("/", response_model=list[ClientRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[ClientRead], status_code=200)
 async def read_clients(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
-    status: str | None = None,
+    client_status: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    page: int | None = None,
 ):
-    """Get all clients the user has access to."""
+    """
+    Get all clients the user has access to.
+
+    Supports pagination with skip/limit or page/limit parameters.
+    Returns a paginated response with items and metadata.
+    """
     try:
         # Base query to get clients from workspaces the user has access to
         query = (
@@ -79,12 +99,20 @@ async def read_clients(
         if workspace_id:
             query = query.where(Client.workspace_id == workspace_id)
 
-        if status:
-            query = query.where(Client.status == status)
+        if client_status:
+            query = query.where(Client.status == client_status)
 
-        # Execute query
-        clients = (await session.exec(query)).all()
-        return clients
+        # Apply pagination and get items with metadata
+        clients, metadata = await paginate_query(
+            session=session,
+            query=query,
+            skip=skip,
+            limit=limit,
+            page=page
+        )
+
+        # Return paginated response
+        return PaginatedResponse(items=clients, metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -160,17 +188,17 @@ async def update_client(
             require_edit_permission=True
         )
 
-        # Update client fields
+        # Update client fields and timestamps
         client_data = client.model_dump(exclude_unset=True)
-        for key, value in client_data.items():
-            setattr(db_client, key, value)
-
-        # Update the updated_at timestamp
-        from datetime import datetime, timezone
-        db_client.updated_at = datetime.now(timezone.utc)
+        update_entity_timestamps(db_client, update_data=client_data)
 
         await session.commit()
         await session.refresh(db_client)
+
+        # Invalidate dashboard cache since client data has changed
+        invalidate_cache("get_workspace_stats")
+        invalidate_cache("get_client_distribution")
+
         return db_client
     except Exception as e:
         await session.rollback()
@@ -215,6 +243,12 @@ async def delete_client(
 
         await session.delete(db_client)
         await session.commit()
+
+        # Invalidate dashboard cache since client data has changed
+        invalidate_cache("get_workspace_stats")
+        invalidate_cache("get_client_distribution")
+        invalidate_cache("get_recent_activity")
+
         return None
     except Exception as e:
         await session.rollback()

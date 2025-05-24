@@ -14,18 +14,54 @@ import {
   TaskUpdate,
   DashboardStats,
   ClientDistribution,
-  RecentActivityItem
+  RecentActivityItem,
+  Product,
+  ProductCreate,
+  ProductUpdate
 } from "../../../types/crm";
+import {
+  PaginatedClients,
+  PaginatedInvoices,
+  PaginatedOpportunities,
+  PaginatedTasks,
+  PaginatedResponse,
+  PaginationParams,
+  extractItems,
+  isPaginated
+} from "../../../types/crm/pagination";
 import { api as apiClient } from "../api";
 
+// Type alias for paginated products
+export type PaginatedProducts = PaginatedResponse<Product>;
+
 // Client API
-export const useGetClients = (params?: { workspace_id?: string; status?: string }) => {
-  return useQuery<Client[]>({
+export const useGetClients = (params?: { workspace_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedClients | Client[]>({
     queryKey: ['clients', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/clients', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -93,13 +129,33 @@ export const useDeleteClient = () => {
 export const useDeleteClientMutation = useDeleteClient;
 
 // Invoice API
-export const useGetInvoices = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
-  return useQuery<Invoice[]>({
+export const useGetInvoices = (params?: { workspace_id?: string; client_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedInvoices | Invoice[]>({
     queryKey: ['invoices', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/invoices', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -167,13 +223,33 @@ export const useDeleteInvoice = () => {
 export const useDeleteInvoiceMutation = useDeleteInvoice;
 
 // Opportunity API
-export const useGetOpportunities = (params?: { workspace_id?: string; client_id?: string; status?: string }) => {
-  return useQuery<Opportunity[]>({
+export const useGetOpportunities = (params?: { workspace_id?: string; client_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedOpportunities | Opportunity[]>({
     queryKey: ['opportunities', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/opportunities', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -249,13 +325,33 @@ export const useGetTasks = (params?: {
   assigned_to?: string;
   status?: string;
   priority?: string;
-}) => {
-  return useQuery<Task[]>({
+} & PaginationParams) => {
+  return useQuery<PaginatedTasks | Task[]>({
     queryKey: ['tasks', params],
     queryFn: async () => {
       const response = await apiClient.get('/api/v1/tasks', { params });
       return response.data;
     },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
   });
 };
 
@@ -363,3 +459,97 @@ export const useGetRecentActivity = (workspaceId: string, limit: number = 10) =>
 };
 
 export const useGetRecentActivityQuery = useGetRecentActivity;
+
+// Product API
+export const useGetProducts = (params?: { workspace_id?: string; status?: string } & PaginationParams) => {
+  return useQuery<PaginatedProducts | Product[]>({
+    queryKey: ['products', params],
+    queryFn: async () => {
+      const response = await apiClient.get('/api/v1/products', { params });
+      return response.data;
+    },
+    select: (data) => {
+      // Handle both paginated and non-paginated responses for backward compatibility
+      if (isPaginated(data)) {
+        return data;
+      }
+      // If it's an array, it's the old format
+      return {
+        items: data,
+        metadata: {
+          total: data.length,
+          page: 1,
+          size: data.length,
+          pages: 1,
+          has_next: false,
+          has_prev: false,
+          next_page: null,
+          prev_page: null
+        }
+      };
+    }
+  });
+};
+
+export const useGetProductsQuery = useGetProducts;
+
+export const useGetProduct = (id: string) => {
+  return useQuery<Product>({
+    queryKey: ['product', id],
+    queryFn: async () => {
+      const response = await apiClient.get(`/api/v1/products/${id}`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useGetProductQuery = useGetProduct;
+
+export const useCreateProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (product: ProductCreate) => {
+      const response = await apiClient.post('/api/v1/products', product);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const useCreateProductMutation = useCreateProduct;
+
+export const useUpdateProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, product }: { id: string; product: ProductUpdate }) => {
+      const response = await apiClient.patch(`/api/v1/products/${id}`, product);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const useUpdateProductMutation = useUpdateProduct;
+
+export const useDeleteProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/api/v1/products/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const useDeleteProductMutation = useDeleteProduct;

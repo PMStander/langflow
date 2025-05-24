@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useGetOpportunitiesQuery, useCreateOpportunityMutation, useDeleteOpportunityMutation, useGetClientsQuery } from "@/controllers/API/queries/crm";
 import { Opportunity, OpportunityCreate, OpportunityStatus } from "@/types/crm";
+import { extractItems, extractMetadata } from "@/types/crm/pagination";
 import CRMSidebarComponent from "@/components/core/crmSidebarComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   Dialog,
   DialogContent,
@@ -41,13 +43,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function OpportunitiesPage() {
   // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-  
+
   // Opportunity filters from CRM store
   const { opportunityFilters, setOpportunityFilters } = useCRMStore((state) => ({
     opportunityFilters: state.opportunityFilters,
     setOpportunityFilters: state.setOpportunityFilters,
   }));
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState(opportunityFilters.searchTerm || "");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -58,13 +60,19 @@ export default function OpportunitiesPage() {
     description: "",
   });
 
-  // Fetch opportunities
-  const { data: opportunities, isLoading } = useGetOpportunitiesQuery(
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch opportunities with pagination
+  const { data: opportunitiesResponse, isLoading } = useGetOpportunitiesQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
           status: opportunityFilters.status,
           client_id: opportunityFilters.clientId,
+          page: pageIndex,
+          limit: pageSize
         }
       : undefined,
     {
@@ -72,8 +80,12 @@ export default function OpportunitiesPage() {
     }
   );
 
+  // Extract opportunities and pagination metadata
+  const opportunities = opportunitiesResponse ? extractItems(opportunitiesResponse) : [];
+  const paginationMetadata = opportunitiesResponse ? extractMetadata(opportunitiesResponse) : null;
+
   // Fetch clients for the dropdown
-  const { data: clients } = useGetClientsQuery(
+  const { data: clientsResponse } = useGetClientsQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
@@ -83,6 +95,9 @@ export default function OpportunitiesPage() {
       enabled: !!currentWorkspaceId,
     }
   );
+
+  // Extract clients from response (handle both paginated and non-paginated)
+  const clients = clientsResponse ? extractItems(clientsResponse) : [];
 
   // Mutations
   const { mutate: createOpportunity } = useCreateOpportunityMutation();
@@ -99,17 +114,25 @@ export default function OpportunitiesPage() {
   // Handle search
   const handleSearch = () => {
     setOpportunityFilters({ ...opportunityFilters, searchTerm });
+    // Reset pagination when search changes
+    setPageIndex(1);
+  };
+
+  // Handle pagination change
+  const handlePageChange = (newPageIndex: number, newPageSize: number) => {
+    setPageIndex(newPageIndex);
+    setPageSize(newPageSize);
   };
 
   // Handle create opportunity
   const handleCreateOpportunity = () => {
     if (!currentWorkspaceId || !newOpportunity.name || !newOpportunity.client_id) return;
-    
+
     createOpportunity({
       ...newOpportunity as OpportunityCreate,
       workspace_id: currentWorkspaceId,
     });
-    
+
     setIsCreateDialogOpen(false);
     setNewOpportunity({
       name: "",
@@ -303,7 +326,7 @@ export default function OpportunitiesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -317,7 +340,7 @@ export default function OpportunitiesPage() {
                   All Clients
                 </DropdownMenuItem>
                 {clients?.map((client) => (
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     key={client.id}
                     onClick={() => setOpportunityFilters({ ...opportunityFilters, clientId: client.id })}
                   >
@@ -401,6 +424,19 @@ export default function OpportunitiesPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && paginationMetadata && (
+          <div className="mt-4">
+            <PaginatorComponent
+              pageIndex={paginationMetadata.page}
+              pageSize={paginationMetadata.size}
+              totalRowsCount={paginationMetadata.total}
+              paginate={handlePageChange}
+              pages={paginationMetadata.pages}
+            />
           </div>
         )}
       </div>

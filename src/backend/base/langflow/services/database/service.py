@@ -368,6 +368,25 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
+        """Run database migrations with improved error handling and retry logic."""
+        try:
+            # Try using the new migration utilities first
+            from langflow.utils.migration_utils import run_database_migrations
+
+            logger.info("Running database migrations with improved error handling...")
+            success = await run_database_migrations(self.engine, str(self.alembic_cfg_path))
+
+            if success:
+                logger.info("Database migrations completed successfully")
+                return
+            else:
+                logger.warning("New migration system failed, falling back to legacy method")
+
+        except Exception as e:
+            logger.warning(f"New migration system error: {e}, falling back to legacy method")
+
+        # Fallback to legacy migration method
+        logger.info("Using legacy migration method...")
         should_initialize_alembic = False
         async with self.with_session() as session:
             # If the table does not exist it throws an error

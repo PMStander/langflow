@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 class InvoiceBase(SQLModel):
     """Base model for Invoice."""
     invoice_number: str = Field(index=True)
-    amount: float = Field()
-    status: str = Field(default="draft")  # draft, sent, paid, overdue
-    issue_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    due_date: datetime | None = Field(default=None)
+    amount: float = Field(index=True)
+    status: str = Field(default="draft", index=True)  # draft, sent, paid, overdue
+    issue_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    due_date: datetime | None = Field(default=None, index=True)
     description: str | None = Field(default=None, sa_column=Column(Text))
 
 
@@ -31,9 +31,7 @@ class Invoice(InvoiceBase, table=True):  # type: ignore[call-arg]
 
     id: UUIDstr = Field(
         default_factory=uuid4,
-        primary_key=True,
-        unique=True,
-        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+        sa_column=Column(PostgresUUID(as_uuid=True), primary_key=True, unique=True)
     )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     client_id: UUIDstr = Field(index=True, foreign_key="client.id")

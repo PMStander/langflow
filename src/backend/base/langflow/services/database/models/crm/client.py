@@ -19,11 +19,11 @@ if TYPE_CHECKING:
 class ClientBase(SQLModel):
     """Base model for Client."""
     name: str = Field(index=True)
-    email: str | None = Field(default=None)
+    email: str | None = Field(default=None, index=True)
     phone: str | None = Field(default=None)
-    company: str | None = Field(default=None)
+    company: str | None = Field(default=None, index=True)
     description: str | None = Field(default=None, sa_column=Column(Text))
-    status: str = Field(default="active")  # active, inactive, lead
+    status: str = Field(default="active", index=True)  # active, inactive, lead
 
 
 class Client(ClientBase, table=True):  # type: ignore[call-arg]
@@ -32,9 +32,7 @@ class Client(ClientBase, table=True):  # type: ignore[call-arg]
 
     id: UUIDstr = Field(
         default_factory=uuid4,
-        primary_key=True,
-        unique=True,
-        sa_column=Column(PostgresUUID(as_uuid=True), unique=True)
+        sa_column=Column(PostgresUUID(as_uuid=True), primary_key=True, unique=True)
     )
     workspace_id: UUIDstr = Field(index=True, foreign_key="workspace.id")
     created_by: UUIDstr = Field(index=True, foreign_key="user.id")

@@ -891,3 +891,12 @@ export const formatNumber = (num: number | undefined): string => {
   }
   return num?.toString();
 };
+
+export const formatCurrency = (value: number | undefined): string => {
+  if (value === undefined) return "$0";
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
