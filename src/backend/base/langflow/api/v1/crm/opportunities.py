@@ -22,7 +22,7 @@ from langflow.api.v1.crm.models import PaginatedResponse
 router = APIRouter(prefix="/opportunities", tags=["Opportunities"])
 
 
-@router.post("/", response_model=OpportunityRead, status_code=201)
+@router.post("", response_model=OpportunityRead, status_code=201)
 async def create_opportunity(
     *,
     session: DbSession,
@@ -64,7 +64,7 @@ async def create_opportunity(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[OpportunityRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[OpportunityRead], status_code=200)
 async def read_opportunities(
     *,
     session: DbSession,

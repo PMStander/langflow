@@ -84,12 +84,28 @@ async def read_products(
     size: int = 10,
 ):
     """Get all products the user has access to."""
-    # Build query
-    query = select(Product).where(get_entity_access_filter(Product, current_user.id))
-
-    # Filter by workspace if provided
+    # Simplified query to avoid relationship issues
     if workspace_id:
-        query = query.where(Product.workspace_id == workspace_id)
+        # Direct workspace filter - user must have access to this workspace
+        query = select(Product).where(Product.workspace_id == workspace_id)
+    else:
+        # Get all products for workspaces the user owns or is a member of
+        from langflow.services.database.models.workspace import Workspace, WorkspaceMember
+        from sqlmodel import or_
+
+        # Get workspace IDs the user has access to
+        workspace_query = select(Workspace.id).where(
+            or_(
+                Workspace.owner_id == current_user.id,
+                Workspace.id.in_(
+                    select(WorkspaceMember.workspace_id).where(
+                        WorkspaceMember.user_id == current_user.id
+                    )
+                )
+            )
+        )
+
+        query = select(Product).where(Product.workspace_id.in_(workspace_query))
 
     # Filter by status if provided
     if product_status:

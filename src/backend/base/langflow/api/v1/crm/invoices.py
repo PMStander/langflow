@@ -22,7 +22,7 @@ from langflow.api.v1.crm.models import PaginatedResponse
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
-@router.post("/", response_model=InvoiceRead, status_code=201)
+@router.post("", response_model=InvoiceRead, status_code=201)
 async def create_invoice(
     *,
     session: DbSession,
@@ -64,7 +64,7 @@ async def create_invoice(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[InvoiceRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[InvoiceRead], status_code=200)
 async def read_invoices(
     *,
     session: DbSession,

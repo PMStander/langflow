@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { crmApi } from '@/services/crm/crmApi';
+import { useGetProductsQuery } from '@/controllers/API/queries/crm';
 import { Product, ProductStatus } from '@/types/crm';
+import { extractItems } from '@/types/crm/pagination';
+import CRMSidebarComponent from '@/components/core/crmSidebarComponent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,10 +29,13 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // API hooks
-  const { data: products, isLoading, refetch } = crmApi.useGetProductsQuery({
+  const { data: productsResponse, isLoading, refetch } = useGetProductsQuery({
     workspace_id: currentWorkspaceId || '',
     status: activeTab !== 'all' ? activeTab : undefined,
   });
+
+  // Extract products from response (handle both paginated and non-paginated)
+  const products = productsResponse ? extractItems(productsResponse) : [];
 
   // Filter products based on search query
   const filteredProducts = products?.filter((product) => {
@@ -112,24 +117,31 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleImportExport}>
-            <UploadIcon className="mr-2 h-4 w-4" />
-            Import/Export
-          </Button>
-          <Button variant="outline" onClick={handleEcommerceIntegration}>
-            <ShoppingCartIcon className="mr-2 h-4 w-4" />
-            E-commerce
-          </Button>
-          <Button onClick={handleCreateProduct}>
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+    <div className="flex h-full">
+      <CRMSidebarComponent />
+      <div className="flex-1 overflow-auto p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Products</h1>
+            <p className="text-muted-foreground">
+              Manage your products and inventory
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleImportExport}>
+              <UploadIcon className="mr-2 h-4 w-4" />
+              Import/Export
+            </Button>
+            <Button variant="outline" onClick={handleEcommerceIntegration}>
+              <ShoppingCartIcon className="mr-2 h-4 w-4" />
+              E-commerce
+            </Button>
+            <Button onClick={handleCreateProduct}>
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="mb-6">
         <div className="flex justify-between items-center mb-4">
@@ -203,6 +215,7 @@ export default function ProductsPage() {
           onSuccess={() => refetch()}
         />
       )}
+      </div>
     </div>
   );
 }

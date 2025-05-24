@@ -23,7 +23,7 @@ from langflow.api.v1.crm.cache import invalidate_cache
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
-@router.post("/", response_model=ClientRead, status_code=201)
+@router.post("", response_model=ClientRead, status_code=201)
 async def create_client(
     *,
     session: DbSession,
@@ -71,7 +71,7 @@ async def create_client(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[ClientRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[ClientRead], status_code=200)
 async def read_clients(
     *,
     session: DbSession,

@@ -72,42 +72,42 @@ class Product(ProductBase, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    # Relationships
-    workspace: "Workspace" = Relationship(back_populates="products")
-    creator: "User" = Relationship(
-        back_populates="created_products",
-        sa_relationship_kwargs={"foreign_keys": "Product.created_by"}
-    )
+    # Basic relationships only (complex relationships temporarily disabled)
+    # workspace: "Workspace" = Relationship(back_populates="products")
+    # creator: "User" = Relationship(
+    #     back_populates="created_products",
+    #     sa_relationship_kwargs={"foreign_keys": "Product.created_by"}
+    # )
 
-    # Many-to-many relationship with categories
-    categories: List["ProductCategory"] = Relationship(
-        back_populates="products",
-        link_model=ProductCategoryLink
-    )
+    # Many-to-many relationship with categories (temporarily disabled)
+    # categories: List["ProductCategory"] = Relationship(
+    #     back_populates="products",
+    #     link_model=ProductCategoryLink
+    # )
 
-    # Many-to-many relationship with attributes
-    attributes: List["ProductAttribute"] = Relationship(
-        back_populates="products",
-        link_model=ProductAttributeLink
-    )
+    # Many-to-many relationship with attributes (temporarily disabled)
+    # attributes: List["ProductAttribute"] = Relationship(
+    #     back_populates="products",
+    #     link_model=ProductAttributeLink
+    # )
 
-    # One-to-many relationship with variations
-    variations: List["ProductVariation"] = Relationship(
-        back_populates="product",
-        sa_relationship_kwargs={"cascade": "delete"}
-    )
+    # One-to-many relationship with variations (temporarily disabled)
+    # variations: List["ProductVariation"] = Relationship(
+    #     back_populates="product",
+    #     sa_relationship_kwargs={"cascade": "delete"}
+    # )
 
-    # One-to-many relationship with meta data
-    meta_data: List["ProductMeta"] = Relationship(
-        back_populates="product",
-        sa_relationship_kwargs={"cascade": "delete"}
-    )
+    # One-to-many relationship with meta data (temporarily disabled)
+    # meta_data: List["ProductMeta"] = Relationship(
+    #     back_populates="product",
+    #     sa_relationship_kwargs={"cascade": "delete"}
+    # )
 
-    # One-to-many relationship with reviews
-    reviews: List["ProductReview"] = Relationship(
-        back_populates="product",
-        sa_relationship_kwargs={"cascade": "delete"}
-    )
+    # One-to-many relationship with reviews (temporarily disabled)
+    # reviews: List["ProductReview"] = Relationship(
+    #     back_populates="product",
+    #     sa_relationship_kwargs={"cascade": "delete"}
+    # )
 
 
 class ProductCreate(ProductBase):

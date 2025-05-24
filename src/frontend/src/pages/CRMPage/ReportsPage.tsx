@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useGetClientsQuery } from "@/controllers/API/queries/crm";
+import { extractItems } from "@/types/crm/pagination";
 import CRMSidebarComponent from "@/components/core/crmSidebarComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,20 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { 
-  BarChart, 
-  PieChart, 
-  LineChart, 
-  Download, 
-  Calendar, 
-  Filter, 
-  Save, 
-  Share, 
-  Plus, 
-  FileText, 
-  Users, 
-  TrendingUp, 
-  DollarSign 
+import {
+  BarChart,
+  PieChart,
+  LineChart,
+  Download,
+  Calendar,
+  Filter,
+  Save,
+  Share,
+  Plus,
+  FileText,
+  Users,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 import { api as apiClient } from "@/controllers/API/api";
@@ -61,7 +62,7 @@ const EXPORT_FORMATS = [
 export default function ReportsPage() {
   // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-  
+
   // Local state
   const [activeTab, setActiveTab] = useState("standard");
   const [selectedReportType, setSelectedReportType] = useState("sales_overview");
@@ -80,7 +81,7 @@ export default function ReportsPage() {
   const [exportFormat, setExportFormat] = useState<string | null>(null);
 
   // Fetch clients for filtering
-  const { data: clients } = useGetClientsQuery(
+  const { data: clientsResponse } = useGetClientsQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
@@ -90,6 +91,9 @@ export default function ReportsPage() {
       enabled: !!currentWorkspaceId,
     }
   );
+
+  // Extract clients from response (handle both paginated and non-paginated)
+  const clients = clientsResponse ? extractItems(clientsResponse) : [];
 
   // Fetch report types and available metrics
   useEffect(() => {
@@ -112,41 +116,41 @@ export default function ReportsPage() {
   // Generate report
   const generateReport = async () => {
     if (!currentWorkspaceId) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       let url = `/api/v1/reports/${selectedReportType}?workspace_id=${currentWorkspaceId}&time_frame=${selectedTimeFrame}`;
-      
+
       // Add client filter if selected
       if (selectedClient) {
         url += `&client_id=${selectedClient}`;
       }
-      
+
       // Add custom date range if selected
       if (selectedTimeFrame === 'custom' && customDateRange.from && customDateRange.to) {
         url += `&start_date=${customDateRange.from.toISOString()}&end_date=${customDateRange.to.toISOString()}`;
       }
-      
+
       // Add metrics for custom reports
       if (selectedReportType === 'custom' && selectedMetrics.length > 0) {
         selectedMetrics.forEach(metric => {
           url += `&metrics=${metric}`;
         });
       }
-      
+
       // Add export format if selected
       if (exportFormat) {
         url += `&export_format=${exportFormat}`;
-        
+
         // For export, use window.open to trigger download
         window.open(url, '_blank');
         setExportFormat(null);
         setIsLoading(false);
         return;
       }
-      
+
       const response = await apiClient.get(url);
       setReportData(response.data);
     } catch (error: any) {
@@ -193,7 +197,7 @@ export default function ReportsPage() {
             <TabsTrigger value="custom">Custom Reports</TabsTrigger>
             <TabsTrigger value="saved">Saved Reports</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="standard" className="space-y-4">
             <Card>
               <CardHeader>
@@ -222,7 +226,7 @@ export default function ReportsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="time-frame">Time Frame</Label>
                     <Select value={selectedTimeFrame} onValueChange={handleTimeFrameChange}>
@@ -238,15 +242,15 @@ export default function ReportsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="client-filter">Client Filter (Optional)</Label>
-                    <Select value={selectedClient || ""} onValueChange={setSelectedClient}>
+                    <Select value={selectedClient || "all"} onValueChange={(value) => setSelectedClient(value === "all" ? null : value)}>
                       <SelectTrigger id="client-filter">
                         <SelectValue placeholder="All Clients" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Clients</SelectItem>
+                        <SelectItem value="all">All Clients</SelectItem>
                         {clients?.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
@@ -256,28 +260,29 @@ export default function ReportsPage() {
                     </Select>
                   </div>
                 </div>
-                
+
                 {showDateRangePicker && (
                   <div className="mt-4">
                     <Label>Custom Date Range</Label>
-                    <DateRangePicker 
+                    <DateRangePicker
                       dateRange={customDateRange}
                       onDateRangeChange={setCustomDateRange}
                     />
                   </div>
                 )}
-                
+
                 <div className="mt-6 flex items-center justify-between">
                   <div className="flex space-x-2">
                     <Button onClick={generateReport} disabled={isLoading}>
                       {isLoading ? "Generating..." : "Generate Report"}
                     </Button>
-                    
-                    <Select value={exportFormat || ""} onValueChange={setExportFormat}>
+
+                    <Select value={exportFormat || "none"} onValueChange={(value) => setExportFormat(value === "none" ? null : value)}>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Export Report" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Export Report</SelectItem>
                         {EXPORT_FORMATS.map((format) => (
                           <SelectItem key={format.id} value={format.id}>
                             <div className="flex items-center">
@@ -289,14 +294,14 @@ export default function ReportsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <Button variant="outline" onClick={() => setReportData(null)}>
                     Clear
                   </Button>
                 </div>
               </CardContent>
             </Card>
-            
+
             {error && (
               <Card className="border-red-500">
                 <CardContent className="pt-6">
@@ -304,7 +309,7 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {isLoading ? (
               <Card>
                 <CardContent className="pt-6">
@@ -332,23 +337,23 @@ export default function ReportsPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ReportChart 
-                      reportType={selectedReportType} 
-                      data={reportData} 
+                    <ReportChart
+                      reportType={selectedReportType}
+                      data={reportData}
                     />
-                    
+
                     <Separator className="my-6" />
-                    
-                    <ReportDataTable 
-                      reportType={selectedReportType} 
-                      data={reportData} 
+
+                    <ReportDataTable
+                      reportType={selectedReportType}
+                      data={reportData}
                     />
                   </CardContent>
                 </Card>
               </div>
             ) : null}
           </TabsContent>
-          
+
           <TabsContent value="custom" className="space-y-4">
             <Card>
               <CardHeader>
@@ -364,7 +369,7 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="saved" className="space-y-4">
             <Card>
               <CardHeader>

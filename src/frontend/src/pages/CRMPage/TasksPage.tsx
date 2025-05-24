@@ -95,20 +95,25 @@ export default function TasksPage() {
   const paginationMetadata = tasksResponse ? extractMetadata(tasksResponse) : null;
 
   // Fetch related entities for dropdowns
-  const { data: clients } = useGetClientsQuery(
+  const { data: clientsResponse } = useGetClientsQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
   );
 
-  const { data: invoices } = useGetInvoicesQuery(
+  const { data: invoicesResponse } = useGetInvoicesQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
   );
 
-  const { data: opportunities } = useGetOpportunitiesQuery(
+  const { data: opportunitiesResponse } = useGetOpportunitiesQuery(
     currentWorkspaceId ? { workspace_id: currentWorkspaceId } : undefined,
     { enabled: !!currentWorkspaceId }
   );
+
+  // Extract arrays from responses (handle both paginated and non-paginated)
+  const clients = clientsResponse ? extractItems(clientsResponse) : [];
+  const invoices = invoicesResponse ? extractItems(invoicesResponse) : [];
+  const opportunities = opportunitiesResponse ? extractItems(opportunitiesResponse) : [];
 
   // Mutations
   const { mutate: createTask } = useCreateTaskMutation();

@@ -85,7 +85,7 @@ export default function InvoicesPage() {
   const paginationMetadata = invoicesResponse ? extractMetadata(invoicesResponse) : null;
 
   // Fetch clients for the dropdown
-  const { data: clients } = useGetClientsQuery(
+  const { data: clientsResponse } = useGetClientsQuery(
     currentWorkspaceId
       ? {
           workspace_id: currentWorkspaceId,
@@ -95,6 +95,9 @@ export default function InvoicesPage() {
       enabled: !!currentWorkspaceId,
     }
   );
+
+  // Extract clients from response (handle both paginated and non-paginated)
+  const clients = clientsResponse ? extractItems(clientsResponse) : [];
 
   // Mutations
   const { mutate: createInvoice } = useCreateInvoiceMutation();

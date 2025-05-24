@@ -185,7 +185,7 @@ async def paginate_query(session, query, skip: int = 0, limit: int = 100, page: 
         page = (skip // limit) + 1 if limit > 0 else 1
 
     # Get total count using a separate query
-    count_query = query.with_only_columns([func.count()])
+    count_query = query.with_only_columns(func.count())
     total = (await session.exec(count_query)).one()
 
     # Apply pagination to the original query
