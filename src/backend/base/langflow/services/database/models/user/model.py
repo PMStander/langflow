@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -18,7 +18,12 @@ if TYPE_CHECKING:
     from langflow.services.database.models.crm.invoice import Invoice
     from langflow.services.database.models.crm.opportunity import Opportunity
     from langflow.services.database.models.crm.task import Task
+    from langflow.services.database.models.crm.product import Product
+    from langflow.services.database.models.crm.product_category import ProductCategory
+    from langflow.services.database.models.crm.product_attribute import ProductAttribute
+    from langflow.services.database.models.crm.product_review import ProductReview
     from langflow.services.database.models.book import Book, BookTemplate
+
 
 
 class UserOptin(BaseModel):
@@ -87,6 +92,22 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     assigned_tasks: list["Task"] = Relationship(
         back_populates="assignee",
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to", "cascade": "delete"},
+    )
+    created_products: list["Product"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "Product.created_by", "cascade": "delete"},
+    )
+    created_product_categories: list["ProductCategory"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "ProductCategory.created_by", "cascade": "delete"},
+    )
+    created_product_attributes: list["ProductAttribute"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "ProductAttribute.created_by", "cascade": "delete"},
+    )
+    created_product_reviews: list["ProductReview"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "ProductReview.created_by", "cascade": "delete"},
     )
 
     # Book Creator relationships

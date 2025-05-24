@@ -22,7 +22,7 @@ from langflow.api.v1.crm.models import PaginatedResponse
 router = APIRouter(prefix="/opportunities", tags=["Opportunities"])
 
 
-@router.post("/", response_model=OpportunityRead, status_code=201)
+@router.post("", response_model=OpportunityRead, status_code=201)
 async def create_opportunity(
     *,
     session: DbSession,
@@ -64,14 +64,14 @@ async def create_opportunity(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[OpportunityRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[OpportunityRead], status_code=200)
 async def read_opportunities(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
     client_id: UUID | None = None,
-    status: str | None = None,
+    opportunity_status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     page: int | None = None,
@@ -96,8 +96,8 @@ async def read_opportunities(
         if client_id:
             query = query.where(Opportunity.client_id == client_id)
 
-        if status:
-            query = query.where(Opportunity.status == status)
+        if opportunity_status:
+            query = query.where(Opportunity.status == opportunity_status)
 
         # Apply pagination and get items with metadata
         opportunities, metadata = await paginate_query(

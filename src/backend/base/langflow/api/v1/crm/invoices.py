@@ -22,7 +22,7 @@ from langflow.api.v1.crm.models import PaginatedResponse
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
-@router.post("/", response_model=InvoiceRead, status_code=201)
+@router.post("", response_model=InvoiceRead, status_code=201)
 async def create_invoice(
     *,
     session: DbSession,
@@ -64,14 +64,14 @@ async def create_invoice(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[InvoiceRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[InvoiceRead], status_code=200)
 async def read_invoices(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
     client_id: UUID | None = None,
-    status: str | None = None,
+    invoice_status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     page: int | None = None,
@@ -96,8 +96,8 @@ async def read_invoices(
         if client_id:
             query = query.where(Invoice.client_id == client_id)
 
-        if status:
-            query = query.where(Invoice.status == status)
+        if invoice_status:
+            query = query.where(Invoice.status == invoice_status)
 
         # Apply pagination and get items with metadata
         invoices, metadata = await paginate_query(

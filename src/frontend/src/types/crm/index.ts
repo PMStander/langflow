@@ -4,6 +4,14 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue';
 export type OpportunityStatus = 'new' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
 export type TaskStatus = 'open' | 'in_progress' | 'completed' | 'cancelled';
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type ProductStatus = 'publish' | 'draft' | 'pending' | 'private';
+export type ProductStockStatus = 'instock' | 'outofstock' | 'onbackorder';
+export type ProductBackorderStatus = 'no' | 'notify' | 'yes';
+export type ProductCatalogVisibility = 'visible' | 'catalog' | 'search' | 'hidden';
+export type ProductTaxStatus = 'taxable' | 'shipping' | 'none';
+
+// Import product types
+export * from './product';
 
 // Base Client interface
 export interface Client {

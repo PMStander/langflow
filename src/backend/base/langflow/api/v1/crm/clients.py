@@ -23,7 +23,7 @@ from langflow.api.v1.crm.cache import invalidate_cache
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
-@router.post("/", response_model=ClientRead, status_code=201)
+@router.post("", response_model=ClientRead, status_code=201)
 async def create_client(
     *,
     session: DbSession,
@@ -71,13 +71,13 @@ async def create_client(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[ClientRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[ClientRead], status_code=200)
 async def read_clients(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
     workspace_id: UUID | None = None,
-    status: str | None = None,
+    client_status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     page: int | None = None,
@@ -99,8 +99,8 @@ async def read_clients(
         if workspace_id:
             query = query.where(Client.workspace_id == workspace_id)
 
-        if status:
-            query = query.where(Client.status == status)
+        if client_status:
+            query = query.where(Client.status == client_status)
 
         # Apply pagination and get items with metadata
         clients, metadata = await paginate_query(

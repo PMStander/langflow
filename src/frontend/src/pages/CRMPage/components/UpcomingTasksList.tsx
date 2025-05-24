@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetTasksQuery } from "@/controllers/API/queries/crm";
 import { Task } from "@/types/crm";
+import { extractItems } from "@/types/crm/pagination";
 import { format } from "date-fns";
 
 interface UpcomingTasksListProps {
@@ -10,7 +11,7 @@ interface UpcomingTasksListProps {
 }
 
 export function UpcomingTasksList({ workspaceId }: UpcomingTasksListProps) {
-  const { data: tasks, isLoading } = useGetTasksQuery(
+  const { data: tasksResponse, isLoading } = useGetTasksQuery(
     workspaceId
       ? {
           workspace_id: workspaceId,
@@ -21,6 +22,9 @@ export function UpcomingTasksList({ workspaceId }: UpcomingTasksListProps) {
       enabled: !!workspaceId,
     }
   );
+
+  // Extract tasks from response (handle both paginated and non-paginated)
+  const tasks = tasksResponse ? extractItems(tasksResponse) : [];
 
   // Sort tasks by due date (closest first)
   const sortedTasks = tasks

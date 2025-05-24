@@ -22,7 +22,7 @@ from langflow.api.v1.crm.models import PaginatedResponse
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-@router.post("/", response_model=TaskRead, status_code=201)
+@router.post("", response_model=TaskRead, status_code=201)
 async def create_task(
     *,
     session: DbSession,
@@ -64,7 +64,7 @@ async def create_task(
         ) from e
 
 
-@router.get("/", response_model=PaginatedResponse[TaskRead], status_code=200)
+@router.get("", response_model=PaginatedResponse[TaskRead], status_code=200)
 async def read_tasks(
     *,
     session: DbSession,
@@ -74,7 +74,7 @@ async def read_tasks(
     invoice_id: UUID | None = None,
     opportunity_id: UUID | None = None,
     assigned_to: UUID | None = None,
-    status: str | None = None,
+    task_status: str | None = None,
     priority: str | None = None,
     skip: int = 0,
     limit: int = 100,
@@ -109,8 +109,8 @@ async def read_tasks(
         if assigned_to:
             query = query.where(Task.assigned_to == assigned_to)
 
-        if status:
-            query = query.where(Task.status == status)
+        if task_status:
+            query = query.where(Task.status == task_status)
 
         if priority:
             query = query.where(Task.priority == priority)

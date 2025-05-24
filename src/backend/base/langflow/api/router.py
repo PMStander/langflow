@@ -32,6 +32,15 @@ from langflow.api.v1.crm import (
     tasks_router,
     dashboard_router,
     reports_router,
+    products_router,
+    product_categories_router,
+    product_attributes_router,
+    product_variations_router,
+    product_meta_router,
+    product_import_export_router,
+    product_images_router,
+    product_reviews_router,
+    ecommerce_integration_router,
 )
 from langflow.api.v2 import files_router as files_router_v2
 
@@ -79,6 +88,11 @@ router_v1.include_router(opportunities_router)
 router_v1.include_router(tasks_router)
 router_v1.include_router(dashboard_router)
 router_v1.include_router(reports_router)
+router_v1.include_router(products_router)
+router_v1.include_router(product_categories_router)
+router_v1.include_router(product_attributes_router)
+router_v1.include_router(product_variations_router)
+router_v1.include_router(product_meta_router)
 
 router_v2.include_router(files_router_v2)
 

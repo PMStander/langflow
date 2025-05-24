@@ -9,9 +9,10 @@
 5. [Invoices Management](#invoices-management)
 6. [Opportunities Management](#opportunities-management)
 7. [Tasks Management](#tasks-management)
-8. [Reports](#reports)
-9. [Workspace Integration](#workspace-integration)
-10. [API Reference](#api-reference)
+8. [Products Management](#products-management)
+9. [Reports](#reports)
+10. [Workspace Integration](#workspace-integration)
+11. [API Reference](#api-reference)
 
 ## Introduction
 
@@ -24,6 +25,7 @@ The Langflow CRM (Customer Relationship Management) module provides a comprehens
 - **Invoices Management**: Create and track invoices for your clients
 - **Opportunities Management**: Track sales opportunities and their progress
 - **Tasks Management**: Organize and track tasks related to clients, invoices, and opportunities
+- **Products Management**: Manage your product catalog, categories, attributes, and variations
 - **Reports**: Generate reports to analyze your CRM data
 - **Workspace Integration**: Organize your CRM data by workspace and control access through workspace permissions
 
@@ -38,6 +40,7 @@ The CRM module is organized into several sections, accessible through the sideba
 - **Invoices**: Create and track invoices
 - **Opportunities**: Track sales opportunities
 - **Tasks**: Organize and track tasks
+- **Products**: Manage your product catalog
 - **Reports**: Generate reports to analyze your CRM data
 
 ## Dashboard
@@ -240,6 +243,112 @@ To delete a task:
 2. Click the "Delete" button
 3. Confirm the deletion
 
+## Products Management
+
+The Products section allows you to manage your product catalog, including product categories, attributes, variations, and metadata.
+
+### Viewing Products
+
+The Products page displays a list of all products in the current workspace. You can:
+
+- **Filter** products by status (publish, draft, pending, private)
+- **Search** for products by name, SKU, or description
+- **Sort** products by various fields
+- **Paginate** through the product list
+
+### Creating a Product
+
+To create a new product:
+
+1. Click the "Add Product" button
+2. Fill in the product details in the form with multiple tabs:
+
+   **General Tab**:
+   - **Name**: Product name (required)
+   - **Slug**: URL-friendly version of the name (required)
+   - **Description**: Full product description
+   - **Short Description**: Brief product description
+   - **SKU**: Stock Keeping Unit
+   - **Regular Price**: Regular product price (required)
+   - **Sale Price**: Discounted price (if on sale)
+   - **Status**: Product status (publish, draft, pending, private)
+   - **Featured**: Whether the product is featured
+
+   **Inventory Tab**:
+   - **Manage Stock**: Whether to track inventory
+   - **Stock Quantity**: Available quantity
+   - **Stock Status**: Stock status (in stock, out of stock, on backorder)
+   - **Backorders**: How to handle backorders
+   - **Sold Individually**: Limit purchases to one per order
+
+   **Shipping Tab**:
+   - **Weight**: Product weight
+   - **Dimensions**: Product dimensions (length, width, height)
+   - **Virtual**: Whether the product is virtual (no shipping)
+   - **Downloadable**: Whether the product is downloadable
+
+   **Advanced Tab**:
+   - **Catalog Visibility**: How the product appears in the catalog
+   - **Tax Status**: Product tax status
+   - **Tax Class**: Product tax class
+   - **Menu Order**: Order for sorting
+   - **Purchasable**: Whether the product can be purchased
+
+3. Click "Create Product" to save the product
+
+### Editing a Product
+
+To edit a product:
+
+1. Click on the product in the product list
+2. Update the product details in the form
+3. Click "Update Product" to save the changes
+
+### Deleting a Product
+
+To delete a product:
+
+1. Click on the product in the product list
+2. Click the "Delete" button
+3. Confirm the deletion
+
+### Managing Product Categories
+
+Product categories help organize your products into logical groups. To manage product categories:
+
+1. Navigate to the Products page
+2. Click on the "Categories" tab
+3. From here you can:
+   - **View** existing categories
+   - **Create** new categories
+   - **Edit** existing categories
+   - **Delete** categories
+
+### Managing Product Attributes
+
+Product attributes define characteristics of your products (like color, size, material). To manage product attributes:
+
+1. Navigate to the Products page
+2. Click on the "Attributes" tab
+3. From here you can:
+   - **View** existing attributes
+   - **Create** new attributes
+   - **Edit** existing attributes
+   - **Delete** attributes
+   - **Manage** attribute terms (values for each attribute)
+
+### Managing Product Variations
+
+Product variations are specific versions of a product based on attributes (like a T-shirt in different sizes and colors). To manage product variations:
+
+1. Click on a product in the product list
+2. Click on the "Variations" tab
+3. From here you can:
+   - **View** existing variations
+   - **Create** new variations
+   - **Edit** existing variations
+   - **Delete** variations
+
 ## Reports
 
 The Reports section allows you to generate reports to analyze your CRM data.
@@ -303,6 +412,11 @@ The CRM module provides a comprehensive API for programmatic access to CRM data.
 - `/api/v1/invoices`: Invoices API
 - `/api/v1/opportunities`: Opportunities API
 - `/api/v1/tasks`: Tasks API
+- `/api/v1/products`: Products API
+- `/api/v1/product-categories`: Product Categories API
+- `/api/v1/product-attributes`: Product Attributes API
+- `/api/v1/product-variations`: Product Variations API
+- `/api/v1/product-meta`: Product Meta API
 - `/api/v1/dashboard`: Dashboard API
 - `/api/v1/reports`: Reports API
 
