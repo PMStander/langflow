@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.ai_assistant.service import AIAssistantService
+    from langflow.services.book.service import BookService
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -270,3 +271,14 @@ def get_supabase_auth_service():
     from langflow.services.supabase_auth.factory import SupabaseAuthServiceFactory
 
     return get_service(ServiceType.SUPABASE_AUTH_SERVICE, SupabaseAuthServiceFactory())
+
+
+def get_book_service() -> BookService:
+    """Retrieves the Book Service instance from the service manager.
+
+    Returns:
+        BookService: The Book Service instance.
+    """
+    from langflow.services.book.factory import BookServiceFactory
+
+    return get_service(ServiceType.BOOK_SERVICE, BookServiceFactory())

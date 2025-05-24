@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from langflow.services.database.models.crm.product_category import ProductCategory
     from langflow.services.database.models.crm.product_attribute import ProductAttribute
     from langflow.services.database.models.crm.product_review import ProductReview
+    from langflow.services.database.models.book import Book, BookTemplate
+
 
 
 class UserOptin(BaseModel):
@@ -106,6 +108,12 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     created_product_reviews: list["ProductReview"] = Relationship(
         back_populates="creator",
         sa_relationship_kwargs={"foreign_keys": "ProductReview.created_by", "cascade": "delete"},
+    )
+
+    # Book Creator relationships
+    books: list["Book"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "delete"})
+    book_templates: list["BookTemplate"] = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "User.id == BookTemplate.user_id", "cascade": "delete"}
     )
 
 

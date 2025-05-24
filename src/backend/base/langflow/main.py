@@ -27,6 +27,7 @@ from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.services.database.pagination_patch import patch_sqlalchemy_pagination
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
+    initialize_book_templates,
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
@@ -141,6 +142,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.debug("Initializing super user")
             await initialize_super_user_if_needed()
             logger.debug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Initializing book templates")
+            await initialize_book_templates()
+            logger.debug(f"Book templates initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             logger.debug("Loading bundles")

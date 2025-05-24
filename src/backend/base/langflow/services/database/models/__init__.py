@@ -8,6 +8,7 @@ from .user import User
 from .variable import Variable
 from .workspace import Workspace, WorkspaceMember
 from .crm import Client, Invoice, Opportunity, Task
+from .book import Book, BookCover, BookInterior, BookPage, BookTemplate
 
 __all__ = [
     "ApiKey",
@@ -24,4 +25,9 @@ __all__ = [
     "Invoice",
     "Opportunity",
     "Task",
+    "Book",
+    "BookCover",
+    "BookInterior",
+    "BookPage",
+    "BookTemplate",
 ]
